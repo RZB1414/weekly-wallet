@@ -4,9 +4,12 @@ import { api } from './lib/api';
 import { getWeekId } from './lib/utils';
 import './styles/App.css';
 
+import MonthlyPlanningModal from './components/MonthlyPlanningModal';
+
 const App = () => {
     const [weeks, setWeeks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isMonthlyPlanningOpen, setIsMonthlyPlanningOpen] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -78,6 +81,20 @@ const App = () => {
                 onUpdateWeek={handleUpdateWeek}
                 onCreateWeek={handleCreateWeek}
             />
+
+            <button
+                className="monthly-planning-btn"
+                onClick={() => setIsMonthlyPlanningOpen(true)}
+            >
+                Monthly Planning
+            </button>
+
+            {isMonthlyPlanningOpen && (
+                <MonthlyPlanningModal
+                    isOpen={isMonthlyPlanningOpen}
+                    onClose={() => setIsMonthlyPlanningOpen(false)}
+                />
+            )}
         </div>
     );
 };

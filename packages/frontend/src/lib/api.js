@@ -24,5 +24,29 @@ export const api = {
         } catch (e) {
             console.error('Failed to save', e);
         }
+    },
+
+    getMonthlyPlanning: async () => {
+        try {
+            const res = await fetch(`${API_URL}/monthly-planning`, { mode: 'cors' });
+            if (!res.ok) throw new Error('Failed to fetch monthly planning');
+            return await res.json();
+        } catch (e) {
+            console.error(e);
+            return { categories: [], expenses: [] };
+        }
+    },
+
+    saveMonthlyPlanning: async (data) => {
+        try {
+            await fetch(`${API_URL}/monthly-planning`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                mode: 'cors'
+            });
+        } catch (e) {
+            console.error('Failed to save monthly planning', e);
+        }
     }
 };
