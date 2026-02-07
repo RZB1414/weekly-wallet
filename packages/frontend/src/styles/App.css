@@ -1,0 +1,33 @@
+/* App specific styles if any, mostly structural */
+.app-container {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+.loading-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: var(--color-neon-cyan);
+    font-family: var(--font-display);
+    font-size: 2rem;
+    letter-spacing: 0.2em;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 20px var(--color-neon-cyan);
+    }
+
+    100% {
+        opacity: 0.5;
+    }
+}

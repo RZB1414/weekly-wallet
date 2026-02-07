@@ -1,0 +1,85 @@
+.expense-list-container {
+    overflow-y: auto;
+    padding: 0.8rem;
+    /* Less padding on mobile */
+    flex: 1;
+    /* Scrollbar styles */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-imperial-red) black;
+}
+
+.expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.3rem;
+    /* Added horizontal padding */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+    background: rgba(4, 3, 3, 0.696);
+    /* Faint background for blur visibility */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 4px;
+    /* Slight rounding */
+    margin-bottom: 0.5rem;
+    /* Space between items */
+}
+
+.expense-item:active {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.expense-info {
+    flex: 1;
+    overflow: hidden;
+    margin-right: 0.5rem;
+}
+
+.expense-info h4 {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    color: var(--color-imperial-white);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.expense-date {
+    font-family: monospace;
+    font-size: 0.65rem;
+    color: var(--color-text-secondary);
+}
+
+.expense-amount {
+    font-family: monospace;
+    font-size: 1.2rem;
+    color: var(--color-imperial-red);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.expense-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+.btn-delete {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    /* Higher contrast usually better */
+    padding: 0.5rem;
+    /* Touch target size */
+    transition: color 0.2s;
+}
+
+.btn-delete:active,
+.btn-delete:hover {
+    color: var(--color-imperial-red);
+}

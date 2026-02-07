@@ -1,0 +1,204 @@
+.week-card {
+    /* Angled corners via clip-path for that Star Destroyer window look */
+    /* Simplified clip-path for mobile to maximize space, or keep it subtle */
+    clip-path: polygon(15px 0, 100% 0,
+            100% calc(100% - 15px), calc(100% - 15px) 100%,
+            0 100%, 0 15px);
+    border-left: 2px solid var(--color-imperial-red);
+    /* Thinner border for mobile */
+    padding: 1.5rem 1rem;
+    /* Compact padding */
+    width: 95%;
+    /* Mobile width */
+    height: 90vh;
+    /* Occupy most of screen height */
+    max-height: 800px;
+    max-width: 500px;
+    /* Tablet/Desktop limit */
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+}
+
+/* "Tech" lines overlay - simplified for mobile performance/visual noise */
+.week-card::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    bottom: 5px;
+    left: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Header: Tactical Display */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Center alignment for mobile */
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-imperial-red);
+    padding-bottom: 0.5rem;
+    z-index: 2;
+}
+
+.week-title {
+    font-size: 1.1rem;
+    /* Smaller font for mobile */
+    color: var(--color-imperial-white);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.week-status {
+    font-size: 0.6rem;
+    color: var(--color-imperial-red);
+    border: 1px solid var(--color-imperial-red);
+    padding: 0.1rem 0.5rem;
+    background: rgba(255, 0, 21, 0.1);
+    letter-spacing: 0.1em;
+}
+
+/* Balance: Main Gauge */
+.balance-section {
+    text-align: right;
+    margin-bottom: 1.5rem;
+    z-index: 2;
+    position: relative;
+    padding-right: 0.5rem;
+}
+
+.balance-label {
+    font-size: 0.7rem;
+    color: var(--color-imperial-gray);
+    letter-spacing: 0.2em;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+}
+
+.balance-amount {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    /* Smaller prominent size */
+    font-weight: 900;
+    color: var(--color-imperial-white);
+    line-height: 1;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.balance-amount.positive {
+    color: var(--color-imperial-white);
+}
+
+.balance-amount.low {
+    color: var(--color-imperial-red);
+    text-shadow: 0 0 20px var(--color-imperial-red);
+    animation: alertPulse 2s infinite;
+}
+
+@keyframes alertPulse {
+    0% {
+        opacity: 1;
+        text-shadow: 0 0 20px var(--color-imperial-red);
+    }
+
+    50% {
+        opacity: 0.8;
+        text-shadow: 0 0 10px var(--color-imperial-red);
+    }
+
+    100% {
+        opacity: 1;
+        text-shadow: 0 0 20px var(--color-imperial-red);
+    }
+}
+
+.initial-balance-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-imperial-gray);
+    color: var(--color-imperial-gray);
+    text-align: right;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    width: 100px;
+    transition: all 0.3s;
+}
+
+.initial-balance-input:focus {
+    border-color: var(--color-imperial-red);
+    color: var(--color-imperial-white);
+}
+
+/* Content Area */
+.card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* background removed for full transparency */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+    /* Ensure list doesn't spill */
+}
+
+/* Push-button for adding expense - Mobile optimized position */
+.add-expense-btn {
+    background: var(--color-imperial-red);
+    color: white;
+    border: none;
+    width: 50px;
+    /* Slightly smaller */
+    height: 50px;
+    /* Hexagon shape roughly */
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    /* Inside card for mobile safety */
+    box-shadow: 0 0 20px rgba(255, 0, 21, 0.4);
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-expense-btn:hover {
+    transform: scale(1.1);
+    background: #ff3344;
+}
+
+
+/* Desktop overrides */
+@media (min-width: 768px) {
+    .week-card {
+        padding: 2rem;
+        width: 100%;
+        margin: 0 auto;
+        border-left-width: 4px;
+    }
+
+    .week-title {
+        font-size: 1.5rem;
+    }
+
+    .balance-amount {
+        font-size: 4.5rem;
+    }
+
+    .add-expense-btn {
+        width: 60px;
+        height: 60px;
+        right: -2rem;
+        /* Hanging style only on desktop */
+        bottom: 2rem;
+    }
+
+}

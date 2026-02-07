@@ -1,0 +1,135 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    /* Top align on mobile to avoid keyboard overlay issues */
+    padding-top: 20vh;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #0a0a0a;
+    border: 1px solid var(--color-imperial-gray);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    width: 90%;
+    /* Mobile width */
+    max-width: 400px;
+    padding: 1.5rem;
+    position: relative;
+}
+
+/* Corner Accents */
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 15px;
+    height: 15px;
+    border-top: 2px solid var(--color-imperial-red);
+    border-left: 2px solid var(--color-imperial-red);
+}
+
+.modal-content::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 15px;
+    height: 15px;
+    border-bottom: 2px solid var(--color-imperial-red);
+    border-right: 2px solid var(--color-imperial-red);
+}
+
+.modal-content h2 {
+    color: var(--color-imperial-red);
+    font-size: 1.1rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.8rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--color-imperial-gray);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.form-group input {
+    width: 100%;
+    background: #151515;
+    border: 1px solid #333;
+    padding: 0.8rem;
+    color: white;
+    font-family: monospace;
+    font-size: 1rem;
+    /* avoid zoom on mobile */
+}
+
+.form-group input:focus {
+    border-color: var(--color-imperial-red);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    margin-top: 1.5rem;
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    flex: 1;
+    /* Stretch buttons on mobile */
+}
+
+.btn-save {
+    background: var(--color-imperial-red);
+    border: none;
+    color: white;
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    box-shadow: 0 0 15px rgba(255, 0, 21, 0.2);
+    flex: 2;
+    /* Stretch buttons on mobile */
+}
+
+@media (min-width: 768px) {
+    .modal-overlay {
+        align-items: center;
+        padding-top: 0;
+    }
+
+    .modal-content {
+        padding: 2rem;
+    }
+
+    .btn-cancel,
+    .btn-save {
+        flex: initial;
+        padding: 0.8rem 2rem;
+    }
+}

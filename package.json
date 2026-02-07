@@ -1,0 +1,7 @@
+{
+    "name": "weekly-wallet-monorepo",
+    "private": true,
+    "workspaces": [
+        "packages/*"
+    ]
+}
