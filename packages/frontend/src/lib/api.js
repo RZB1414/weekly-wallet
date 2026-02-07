@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://weekly-wallet-backend.renanbuiatti14.workers.dev';
 
 export const api = {
     getWeeks: async () => {
