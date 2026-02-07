@@ -26,20 +26,20 @@ export const api = {
         }
     },
 
-    getMonthlyPlanning: async () => {
+    getMonthlyPlanning: async (year, month) => {
         try {
-            const res = await fetch(`${API_URL}/monthly-planning`, { mode: 'cors' });
+            const res = await fetch(`${API_URL}/monthly-planning/${year}/${month}`, { mode: 'cors' });
             if (!res.ok) throw new Error('Failed to fetch monthly planning');
             return await res.json();
         } catch (e) {
             console.error(e);
-            return { categories: [], expenses: [] };
+            return { categories: [], expenses: [], salary: 0 };
         }
     },
 
-    saveMonthlyPlanning: async (data) => {
+    saveMonthlyPlanning: async (year, month, data) => {
         try {
-            await fetch(`${API_URL}/monthly-planning`, {
+            await fetch(`${API_URL}/monthly-planning/${year}/${month}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),

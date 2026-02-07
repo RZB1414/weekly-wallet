@@ -25,23 +25,25 @@ app.post('/api/weeks', async (c) => {
   return c.json({ success: true })
 })
 
-app.get('/api/monthly-planning', async (c) => {
+app.get('/api/monthly-planning/:year/:month', async (c) => {
+  const { year, month } = c.req.param()
   const bucket = c.env.WEEKLY_WALLET_BUCKET
-  const object = await bucket.get('monthly-planning.json')
+  const object = await bucket.get(`monthly-planning-${year}-${month}.json`)
 
   if (!object) {
-    return c.json({ categories: [], expenses: [] })
+    return c.json({ categories: [], expenses: [], salary: 0 })
   }
 
   const data = await object.json()
   return c.json(data)
 })
 
-app.post('/api/monthly-planning', async (c) => {
+app.post('/api/monthly-planning/:year/:month', async (c) => {
+  const { year, month } = c.req.param()
   const bucket = c.env.WEEKLY_WALLET_BUCKET
   const body = await c.req.json()
 
-  await bucket.put('monthly-planning.json', JSON.stringify(body))
+  await bucket.put(`monthly-planning-${year}-${month}.json`, JSON.stringify(body))
   return c.json({ success: true })
 })
 

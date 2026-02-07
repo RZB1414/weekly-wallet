@@ -273,16 +273,59 @@
     border-color: #4caf50;
 }
 
-.save-btn {
-    background: #4caf50;
-    color: white;
-    border: none;
-    padding: 0 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
+
+.date-selection-section {
+    display: flex;
+    gap: 10px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 20px;
 }
 
-.save-btn:hover {
-    background: #43a047;
+.date-select,
+.date-input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+}
+
+.date-select option {
+    background: #222;
+}
+
+.save-all-btn {
+    width: 100%;
+    margin-top: 15px;
+    background: linear-gradient(135deg, #4caf50 0%, #43a047 100%);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s;
+}
+
+.save-all-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.save-all-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 40px;
+    color: #aaa;
+    font-style: italic;
 }
