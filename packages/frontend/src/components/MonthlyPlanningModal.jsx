@@ -5,6 +5,9 @@ import { api } from '../lib/api';
 const MonthlyPlanningModal = ({ isOpen, onClose }) => {
     const [categories, setCategories] = useState([]);
     const [expenses, setExpenses] = useState([]);
+    const [salary, setSalary] = useState(0);
+    const [salaryInput, setSalaryInput] = useState('');
+
     const [newCategory, setNewCategory] = useState('');
     const [newExpenseName, setNewExpenseName] = useState('');
     const [newExpenseAmount, setNewExpenseAmount] = useState('');
@@ -22,20 +25,31 @@ const MonthlyPlanningModal = ({ isOpen, onClose }) => {
             const data = await api.getMonthlyPlanning();
             setCategories(data.categories || []);
             setExpenses(data.expenses || []);
+            setSalary(data.salary || 0);
+            setSalaryInput(data.salary ? data.salary.toString() : '');
             setIsDataLoaded(true);
         } catch (error) {
             console.error("Failed to load monthly planning", error);
         }
     };
 
-    const saveData = async (updatedCategories, updatedExpenses) => {
+    const saveData = async (updatedCategories, updatedExpenses, updatedSalary) => {
         try {
             await api.saveMonthlyPlanning({
                 categories: updatedCategories,
-                expenses: updatedExpenses
+                expenses: updatedExpenses,
+                salary: updatedSalary
             });
         } catch (error) {
             console.error("Failed to save", error);
+        }
+    };
+
+    const handleSaveSalary = () => {
+        const salaryValue = parseFloat(salaryInput);
+        if (!isNaN(salaryValue)) {
+            setSalary(salaryValue);
+            saveData(categories, expenses, salaryValue);
         }
     };
 
@@ -44,7 +58,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose }) => {
         const updatedCategories = [...categories, newCategory.trim()];
         setCategories(updatedCategories);
         setNewCategory('');
-        saveData(updatedCategories, expenses);
+        saveData(updatedCategories, expenses, salary);
 
         // Auto select if it's the first category
         if (!selectedCategory) {
@@ -59,34 +73,24 @@ const MonthlyPlanningModal = ({ isOpen, onClose }) => {
             id: Date.now(),
             name: newExpenseName.trim(),
             amount: parseFloat(newExpenseAmount),
-            category: selectedCategory,
-            completed: false
+            category: selectedCategory
         };
 
         const updatedExpenses = [...expenses, newExpense];
         setExpenses(updatedExpenses);
         setNewExpenseName('');
         setNewExpenseAmount('');
-        saveData(categories, updatedExpenses);
-    };
-
-    const toggleExpense = (id) => {
-        const updatedExpenses = expenses.map(exp =>
-            exp.id === id ? { ...exp, completed: !exp.completed } : exp
-        );
-        setExpenses(updatedExpenses);
-        saveData(categories, updatedExpenses);
+        saveData(categories, updatedExpenses, salary);
     };
 
     const deleteExpense = (id) => {
         const updatedExpenses = expenses.filter(exp => exp.id !== id);
         setExpenses(updatedExpenses);
-        saveData(categories, updatedExpenses);
+        saveData(categories, updatedExpenses, salary);
     };
 
-    const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const paidAmount = expenses.filter(exp => exp.completed).reduce((sum, exp) => sum + exp.amount, 0);
-    const remainingAmount = totalAmount - paidAmount;
+    const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const remainingAmount = salary - totalExpenses;
 
     if (!isOpen) return null;
 
@@ -99,6 +103,21 @@ const MonthlyPlanningModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="modal-content">
+                    {/* Salary Input */}
+                    <div className="salary-section">
+                        <label>Monthly Budget / Salary</label>
+                        <div className="salary-input-group">
+                            <input
+                                type="number"
+                                value={salaryInput}
+                                onChange={e => setSalaryInput(e.target.value)}
+                                placeholder="Enter amount"
+                                className="salary-input"
+                            />
+                            <button className="save-btn" onClick={handleSaveSalary}>Save</button>
+                        </div>
+                    </div>
+
                     {/* Add Expense Form */}
                     <div className="add-item-form">
                         <input
@@ -134,17 +153,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose }) => {
                         {expenses.map(expense => (
                             <li key={expense.id} className="expense-item">
                                 <div className="expense-details">
-                                    <input
-                                        type="checkbox"
-                                        className="expense-checkbox"
-                                        checked={expense.completed}
-                                        onChange={() => toggleExpense(expense.id)}
-                                    />
                                     <div>
-                                        <span className="expense-name" style={{
-                                            textDecoration: expense.completed ? 'line-through' : 'none',
-                                            color: expense.completed ? '#666' : '#fff'
-                                        }}>
+                                        <span className="expense-name" style={{ color: '#fff' }}>
                                             {expense.name}
                                         </span>
                                         <span className="expense-category">{expense.category}</span>
@@ -182,16 +192,16 @@ const MonthlyPlanningModal = ({ isOpen, onClose }) => {
 
                 <div className="modal-footer">
                     <div className="summary-row">
-                        <span>Paid</span>
-                        <span>R$ {paidAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="summary-row">
-                        <span>Remaining</span>
-                        <span>R$ {remainingAmount.toFixed(2)}</span>
+                        <span>Available / Salary</span>
+                        <span>R$ {salary.toFixed(2)}</span>
                     </div>
                     <div className="summary-row total">
-                        <span>Total Projected</span>
-                        <span>R$ {totalAmount.toFixed(2)}</span>
+                        <span>Total Expenses</span>
+                        <span>R$ {totalExpenses.toFixed(2)}</span>
+                    </div>
+                    <div className="summary-row" style={{ color: remainingAmount >= 0 ? '#4caf50' : '#ff5252', fontWeight: 'bold' }}>
+                        <span>Remaining</span>
+                        <span>R$ {remainingAmount.toFixed(2)}</span>
                     </div>
                 </div>
             </div>
