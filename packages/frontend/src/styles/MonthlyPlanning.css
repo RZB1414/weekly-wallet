@@ -501,3 +501,79 @@
 .expense-amount.expense {
     color: #ff5252;
 }
+
+/* Expandable Category Expenses */
+.category-summary-card {
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.category-summary-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.category-summary-card.expanded {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    grid-column: span 2;
+    /* Optional: make it wider when expanded if grid layout allows */
+}
+
+.cat-expenses-list {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.2);
+    animation: fadeIn 0.3s ease;
+}
+
+.cat-expenses-list h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cat-expenses-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cat-expense-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cat-expense-item:last-child {
+    border-bottom: none;
+}
+
+.credit-text {
+    color: #4caf50;
+}
+
+.expense-text {
+    color: #ff5252;
+}
+
+.no-expenses {
+    font-style: italic;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -22,6 +22,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
     // UI State
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryBudget, setNewCategoryBudget] = useState('');
+    const [expandedCategoryId, setExpandedCategoryId] = useState(null);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -164,6 +165,10 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
         setCategories(categories.filter(c => c.id !== id));
     };
 
+    const toggleCategoryExpand = (id) => {
+        setExpandedCategoryId(expandedCategoryId === id ? null : id);
+    };
+
     // Calculations
     const totalSpent = monthlyExpenses.reduce((sum, exp) => {
         // Expenses subtract from global pot (or add to spent total)
@@ -185,7 +190,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
         return {
             ...cat,
             spent,
-            remaining: cat.budget - spent
+            remaining: cat.budget - spent,
+            expenses: catExpenses
         };
     });
 
@@ -285,31 +291,63 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                             {/* Category Summaries */}
                             <div className="category-summary-section">
                                 <h3>Category Budgets</h3>
-                                {categorySummaries.map(cat => (
-                                    <div key={cat.id} className="category-summary-card">
-                                        <div className="cat-sum-header">
-                                            <span>{cat.name}</span>
-                                            <span>R$ {cat.budget.toFixed(2)}</span>
+                                <div className="category-summary-list">
+                                    {categorySummaries.map(cat => (
+                                        <div
+                                            key={cat.id}
+                                            className={`category-summary-card ${expandedCategoryId === cat.id ? 'expanded' : ''}`}
+                                            onClick={() => toggleCategoryExpand(cat.id)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <div className="cat-sum-header">
+                                                <span>{cat.name}</span>
+                                                <span>R$ {cat.budget.toFixed(2)}</span>
+                                            </div>
+                                            <div className="cat-sum-row">
+                                                <span>Spent:</span>
+                                                <span>R$ {cat.spent.toFixed(2)}</span>
+                                            </div>
+                                            <div className={`cat-sum-remaining ${cat.remaining < 0 ? 'negative' : 'positive'}`}>
+                                                <span>Remaining:</span>
+                                                <span>R$ {cat.remaining.toFixed(2)}</span>
+                                            </div>
+
+                                            {/* Expandable Expense List */}
+                                            {expandedCategoryId === cat.id && (
+                                                <div className="cat-expenses-list" onClick={e => e.stopPropagation()}>
+                                                    <h4>Transactions</h4>
+                                                    {cat.expenses.length === 0 ? (
+                                                        <div className="no-expenses">No transactions</div>
+                                                    ) : (
+                                                        <ul>
+                                                            {cat.expenses.map(exp => (
+                                                                <li key={exp.id} className="cat-expense-item">
+                                                                    <span>{exp.name}</span>
+                                                                    <span className={exp.type === 'credit' ? 'credit-text' : 'expense-text'}>
+                                                                        {exp.type === 'credit' ? '+' : '-'} R$ {exp.amount.toFixed(2)}
+                                                                    </span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {isEditing && (
+                                                <button
+                                                    className="delete-cat-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteCategory(cat.id);
+                                                    }}
+                                                    style={{ marginTop: '5px', background: 'transparent', border: 'none', color: '#ff5252', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                >
+                                                    Remove Category
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="cat-sum-row">
-                                            <span>Spent:</span>
-                                            <span>R$ {cat.spent.toFixed(2)}</span>
-                                        </div>
-                                        <div className={`cat-sum-remaining ${cat.remaining < 0 ? 'negative' : 'positive'}`}>
-                                            <span>Remaining:</span>
-                                            <span>R$ {cat.remaining.toFixed(2)}</span>
-                                        </div>
-                                        {isEditing && (
-                                            <button
-                                                className="delete-cat-btn"
-                                                onClick={() => handleDeleteCategory(cat.id)}
-                                                style={{ marginTop: '5px', background: 'transparent', border: 'none', color: '#ff5252', cursor: 'pointer', fontSize: '0.8rem' }}
-                                            >
-                                                Remove Category
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Add Category Section */}
@@ -335,35 +373,6 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Actual Expenses List (Read Only) */}
-                            <div className="actual-expenses-section" style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                                <h3 style={{ fontSize: '1rem', color: '#aaa', marginBottom: '10px' }}>Actual Transactions (from Daily Logs)</h3>
-                                {monthlyExpenses.length === 0 ? (
-                                    <div style={{ color: '#666', fontStyle: 'italic' }}>No transactions recorded for this month.</div>
-                                ) : (
-                                    <ul className="expense-list">
-                                        {monthlyExpenses.map(expense => (
-                                            <li key={expense.id} className="expense-item" style={{ opacity: 0.8 }}>
-                                                <div className="expense-details">
-                                                    <div>
-                                                        <span className="expense-name" style={{ color: '#fff' }}>
-                                                            {expense.name}
-                                                        </span>
-                                                        <span className="expense-category">{expense.category || 'Uncategorized'}</span>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <span className={`expense-amount ${expense.type || 'expense'}`}>
-                                                        {expense.type === 'credit' ? '+ ' : '- '}
-                                                        R$ {expense.amount.toFixed(2)}
-                                                    </span>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
 
                         </div>
 
