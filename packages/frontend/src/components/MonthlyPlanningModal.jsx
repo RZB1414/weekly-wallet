@@ -14,7 +14,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
     const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // 1-12
 
     // Data State
-    // categories: { id, name, budget }[]
+    // categories: { id, name, budget, type }[]
     const [categories, setCategories] = useState([]);
     const [salary, setSalary] = useState(0);
     const [salaryInput, setSalaryInput] = useState('');
@@ -22,6 +22,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
     // UI State
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryBudget, setNewCategoryBudget] = useState('');
+    const [newCategoryType, setNewCategoryType] = useState('credit'); // 'credit' (standard) | 'spend' (deducts budget)
     const [expandedCategoryId, setExpandedCategoryId] = useState(null);
 
     const [isLoading, setIsLoading] = useState(false);
@@ -81,9 +82,9 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
             // Migrate legacy categories (strings) to objects if needed
             const loadedCategories = (data.categories || []).map(cat => {
                 if (typeof cat === 'string') {
-                    return { id: Date.now() + Math.random(), name: cat, budget: 0 };
+                    return { id: Date.now() + Math.random(), name: cat, budget: 0, type: 'credit' };
                 }
-                return cat;
+                return { ...cat, type: cat.type || 'credit' }; // Ensure type exists
             });
 
             setCategories(loadedCategories);
@@ -152,13 +153,15 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
         const newCat = {
             id: Date.now(),
             name: newCategoryName.trim(),
-            budget: !isNaN(budgetVal) ? budgetVal : 0
+            budget: !isNaN(budgetVal) ? budgetVal : 0,
+            type: newCategoryType
         };
 
         const updatedCategories = [...categories, newCat];
         setCategories(updatedCategories);
         setNewCategoryName('');
         setNewCategoryBudget('');
+        setNewCategoryType('credit'); // Reset to default
     };
 
     const handleDeleteCategory = (id) => {
@@ -169,29 +172,59 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
         setExpandedCategoryId(expandedCategoryId === id ? null : id);
     };
 
+    // Helper to calculate spent per category
+    const getCategorySpent = (catName) => {
+        const catExpenses = monthlyExpenses.filter(e => e.category === catName);
+        return catExpenses.reduce((sum, e) => {
+            return e.type === 'credit' ? sum - e.amount : sum + e.amount;
+        }, 0);
+    };
+
     // Calculations
-    const totalSpent = monthlyExpenses.reduce((sum, exp) => {
-        // Expenses subtract from global pot (or add to spent total)
-        // Credits add to global pot (or subtract from spent total)
+    // Total ACTUAL Spent (Net) - for display purposes only
+    const totalActualSpent = monthlyExpenses.reduce((sum, exp) => {
         return exp.type === 'credit' ? sum - exp.amount : sum + exp.amount;
     }, 0);
 
-    const remainingAmount = salary - totalSpent;
+    // Remaining Balance Logic:
+    // Salary
+    // - Sum of 'Spend' Category Budgets
+    // - Sum of Actuals in 'Credit' Categories
+    const remainingAmount = useMemo(() => {
+        let deduction = 0;
+        categories.forEach(cat => {
+            if (cat.type === 'spend') {
+                // For 'Spend' categories, we deduct the Budget (allocation).
+                deduction += cat.budget;
+            } else {
+                // For 'Credit' (Standard) categories, we deduct the Actual Spent.
+                deduction += getCategorySpent(cat.name);
+            }
+        });
+
+        // Count uncategorized expenses as deduction (Standard behavior)
+        const knownCategoryNames = categories.map(c => c.name);
+        // Note: monthlyExpenses includes ALL expenses for the month.
+        // We need to find those that are NOT in any known category.
+        const uncategorizedSpent = monthlyExpenses
+            .filter(e => !knownCategoryNames.includes(e.category))
+            .reduce((sum, e) => e.type === 'credit' ? sum - e.amount : sum + e.amount, 0);
+
+        return salary - deduction - uncategorizedSpent;
+
+    }, [salary, categories, monthlyExpenses]);
+
 
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
     // Category Summary Logic
     const categorySummaries = categories.map(cat => {
-        const catExpenses = monthlyExpenses.filter(e => e.category === cat.name);
-        const spent = catExpenses.reduce((sum, e) => {
-            return e.type === 'credit' ? sum - e.amount : sum + e.amount;
-        }, 0);
-
+        const spent = getCategorySpent(cat.name);
         return {
             ...cat,
             spent,
             remaining: cat.budget - spent,
-            expenses: catExpenses
+            expenses: monthlyExpenses.filter(e => e.category === cat.name)
         };
     });
 
@@ -297,10 +330,10 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                                             key={cat.id}
                                             className={`category-summary-card ${expandedCategoryId === cat.id ? 'expanded' : ''}`}
                                             onClick={() => toggleCategoryExpand(cat.id)}
-                                            style={{ cursor: 'pointer' }}
+                                            style={{ cursor: 'pointer', borderLeft: cat.type === 'spend' ? '4px solid #ff5252' : '1px solid rgba(255,255,255,0.1)' }}
                                         >
                                             <div className="cat-sum-header">
-                                                <span>{cat.name}</span>
+                                                <span>{cat.name} <small style={{ fontWeight: 'normal', opacity: 0.7, fontSize: '0.7em' }}>({cat.type === 'spend' ? 'Spend' : 'Credit'})</small></span>
                                                 <span>R$ {cat.budget.toFixed(2)}</span>
                                             </div>
                                             <div className="cat-sum-row">
@@ -353,6 +386,22 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                             {/* Add Category Section */}
                             {isEditing && (
                                 <div className="add-category-section">
+                                    <div className="transaction-type-toggle" style={{ marginBottom: '10px' }}>
+                                        <button
+                                            className={`type-btn ${newCategoryType === 'credit' ? 'active credit' : ''}`}
+                                            onClick={() => setNewCategoryType('credit')}
+                                            style={{ flex: 1 }}
+                                        >
+                                            Credit (Standard)
+                                        </button>
+                                        <button
+                                            className={`type-btn ${newCategoryType === 'spend' ? 'active expense' : ''}`}
+                                            onClick={() => setNewCategoryType('spend')}
+                                            style={{ flex: 1 }}
+                                        >
+                                            Spend (Deduct Budget)
+                                        </button>
+                                    </div>
                                     <div className="add-category-form">
                                         <input
                                             type="text"
@@ -382,8 +431,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                                 <span>R$ {salary.toFixed(2)}</span>
                             </div>
                             <div className="summary-row total">
-                                <span>Total Spent (Net)</span>
-                                <span>R$ {totalSpent.toFixed(2)}</span>
+                                <span>Total Spent (Net Actuals)</span>
+                                <span>R$ {totalActualSpent.toFixed(2)}</span>
                             </div>
                             <div className="summary-row" style={{ color: remainingAmount >= 0 ? '#4caf50' : '#ff5252', fontWeight: 'bold' }}>
                                 <span>Remaining Global Balance</span>
