@@ -47,4 +47,27 @@ app.post('/api/monthly-planning/:year/:month', async (c) => {
   return c.json({ success: true })
 })
 
+app.get('/api/monthly-plannings', async (c) => {
+  const bucket = c.env.WEEKLY_WALLET_BUCKET
+  const options = { prefix: 'monthly-planning-' }
+  const listed = await bucket.list(options)
+
+  const plans = listed.objects.map(obj => {
+    // Extract year and month from 'monthly-planning-YYYY-MM.json'
+    const match = obj.key.match(/monthly-planning-(\d{4})-(\d{1,2})\.json/)
+    if (match) {
+      return { year: parseInt(match[1]), month: parseInt(match[2]) }
+    }
+    return null
+  }).filter(p => p !== null)
+
+  // Sort by date descending
+  plans.sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year
+    return b.month - a.month
+  })
+
+  return c.json({ plans })
+})
+
 export default app

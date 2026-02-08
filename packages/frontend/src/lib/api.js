@@ -48,5 +48,16 @@ export const api = {
         } catch (e) {
             console.error('Failed to save monthly planning', e);
         }
+    },
+
+    getMonthlyPlannings: async () => {
+        try {
+            const res = await fetch(`${API_URL}/monthly-plannings`, { mode: 'cors' });
+            if (!res.ok) throw new Error('Failed to fetch monthly plannings list');
+            return await res.json();
+        } catch (e) {
+            console.error(e);
+            return { plans: [] };
+        }
     }
 };

@@ -323,6 +323,91 @@
     transform: none;
 }
 
+.plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.plan-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.plan-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.plan-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.create-new-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    color: #aaa;
+    padding: 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+}
+
+.create-new-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.edit-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.edit-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* Read-Only Mode Overrides */
+.read-only .add-item-form,
+.read-only .add-category-section,
+.read-only .delete-btn,
+.read-only .salary-input-group button.save-btn {
+    display: none;
+}
+
+.read-only .salary-input,
+.read-only .add-item-input {
+    background: transparent;
+    border: none;
+    padding-left: 0;
+    pointer-events: none;
+}
+
+.read-only .expense-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .loading-state {
     text-align: center;
     padding: 40px;
