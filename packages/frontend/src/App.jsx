@@ -10,16 +10,17 @@ const App = () => {
     const [weeks, setWeeks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isMonthlyPlanningOpen, setIsMonthlyPlanningOpen] = useState(false);
+    const [activeCategories, setActiveCategories] = useState([]);
 
     // Initial Load
     useEffect(() => {
         const loadData = async () => {
             try {
+                // Load Weeks
                 const data = await api.getWeeks();
                 if (data.weeks && data.weeks.length > 0) {
                     setWeeks(data.weeks);
                 } else {
-                    // Initialize with current week if empty
                     const currentWeekId = getWeekId(new Date());
                     setWeeks([{
                         id: currentWeekId,
@@ -28,6 +29,16 @@ const App = () => {
                         expenses: []
                     }]);
                 }
+
+                // Load Current Month Categories for Dropdowns
+                const now = new Date();
+                const plan = await api.getMonthlyPlanning(now.getFullYear(), now.getMonth() + 1);
+                if (plan && plan.categories) {
+                    // Extract just categories if they are objects, or use them if strings
+                    const cats = plan.categories.map(c => typeof c === 'string' ? c : c.name);
+                    setActiveCategories(cats);
+                }
+
             } catch (error) {
                 console.error("Failed to load data", error);
             } finally {
@@ -54,7 +65,6 @@ const App = () => {
     };
 
     const handleCreateWeek = () => {
-        // Logic to create next week based on last week
         const lastWeek = weeks[weeks.length - 1];
         const lastDate = new Date(lastWeek.startDate);
         const nextDate = new Date(lastDate);
@@ -63,7 +73,7 @@ const App = () => {
         const newWeek = {
             id: getWeekId(nextDate),
             startDate: nextDate.toISOString(),
-            initialBalance: lastWeek.initialBalance, // Carry over budget setting? or 0? keeping setting.
+            initialBalance: lastWeek.initialBalance,
             expenses: []
         };
 
@@ -78,6 +88,7 @@ const App = () => {
         <div className="app-container">
             <WeekCarousel
                 weeks={weeks}
+                categories={activeCategories}
                 onUpdateWeek={handleUpdateWeek}
                 onCreateWeek={handleCreateWeek}
             />
@@ -93,6 +104,7 @@ const App = () => {
                 <MonthlyPlanningModal
                     isOpen={isMonthlyPlanningOpen}
                     onClose={() => setIsMonthlyPlanningOpen(false)}
+                    weeks={weeks} // Pass weeks data for calculation
                 />
             )}
         </div>

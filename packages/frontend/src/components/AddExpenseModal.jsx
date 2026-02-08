@@ -9,10 +9,12 @@ const modalVariants = {
     exit: { opacity: 0, scale: 0.8 }
 };
 
-const AddExpenseModal = ({ isOpen, onClose, onAdd }) => {
+const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+    const [type, setType] = useState('expense'); // 'expense' | 'credit'
+    const [category, setCategory] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -22,11 +24,15 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd }) => {
             id: uuidv4(),
             name,
             amount: parseFloat(amount),
-            date
+            date,
+            type,
+            category: category || 'Uncategorized'
         });
 
         setName('');
         setAmount('');
+        setType('expense');
+        setCategory('');
         onClose();
     };
 
@@ -46,10 +52,46 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd }) => {
                         animate="visible"
                         exit="exit"
                     >
-                        <h2>Add Access Logs (Expense)</h2>
+                        <h2>Add Transaction</h2>
                         <form onSubmit={handleSubmit}>
+                            {/* Type Toggle */}
+                            <div className="form-group" style={{ flexDirection: 'row', gap: '10px' }}>
+                                <button
+                                    type="button"
+                                    className={`type-btn ${type === 'expense' ? 'active' : ''}`}
+                                    onClick={() => setType('expense')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px',
+                                        background: type === 'expense' ? '#ff5252' : 'rgba(255,255,255,0.1)',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Expense
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`type-btn ${type === 'credit' ? 'active' : ''}`}
+                                    onClick={() => setType('credit')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px',
+                                        background: type === 'credit' ? '#4caf50' : 'rgba(255,255,255,0.1)',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Credit
+                                </button>
+                            </div>
+
                             <div className="form-group">
-                                <label>Description (Code Name)</label>
+                                <label>Description</label>
                                 <input
                                     type="text"
                                     value={name}
@@ -58,8 +100,9 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd }) => {
                                     autoFocus
                                 />
                             </div>
+
                             <div className="form-group">
-                                <label>Credits Cost</label>
+                                <label>Amount (R$)</label>
                                 <input
                                     type="number"
                                     value={amount}
@@ -68,17 +111,44 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd }) => {
                                     step="0.01"
                                 />
                             </div>
+
                             <div className="form-group">
-                                <label>Date Cycle</label>
+                                <label>Category</label>
+                                <select
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        borderRadius: '4px',
+                                        color: 'white',
+                                        fontSize: '1rem'
+                                    }}
+                                >
+                                    <option value="" disabled>Select Category</option>
+                                    {categories.map((cat, index) => (
+                                        <option key={index} value={cat} style={{ color: 'black' }}>
+                                            {cat}
+                                        </option>
+                                    ))}
+                                    <option value="Uncategorized" style={{ color: 'black' }}>Uncategorized</option>
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Date</label>
                                 <input
                                     type="date"
                                     value={date}
                                     onChange={(e) => setDate(e.target.value)}
                                 />
                             </div>
+
                             <div className="modal-actions">
-                                <button type="button" className="btn-cancel" onClick={onClose}>Abort</button>
-                                <button type="submit" className="btn-save">Confirm Entry</button>
+                                <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
+                                <button type="submit" className="btn-save">Save</button>
                             </div>
                         </form>
                     </motion.div>

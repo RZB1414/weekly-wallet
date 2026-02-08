@@ -6,7 +6,7 @@ import AddExpenseModal from './AddExpenseModal';
 import { formatCurrency, calculateRemaining, getWeekRange } from '../lib/utils';
 import '../styles/WeekCard.css';
 
-const WeekCard = ({ week, onUpdateWeek }) => {
+const WeekCard = ({ week, categories, onUpdateWeek }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const remaining = calculateRemaining(week.initialBalance, week.expenses);
@@ -69,6 +69,7 @@ const WeekCard = ({ week, onUpdateWeek }) => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onAdd={handleAddExpense}
+                categories={categories}
             />
         </div>
     );

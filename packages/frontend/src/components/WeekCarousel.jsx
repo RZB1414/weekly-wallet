@@ -58,7 +58,7 @@ const swipePower = (offset, velocity) => {
     return Math.abs(offset) * velocity;
 };
 
-const WeekCarousel = ({ weeks, onUpdateWeek, onCreateWeek }) => {
+const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek }) => {
     const [currentIndex, setCurrentIndex] = useState(weeks.length - 1);
     const [direction, setDirection] = useState(0);
 
@@ -113,12 +113,10 @@ const WeekCarousel = ({ weeks, onUpdateWeek, onCreateWeek }) => {
                                 paginate(-1);
                             }
                         }}
-                        // Style needs to ensure it plays nice with grid
-                        // We set width/max-width here to control the card size within the grid cell
                         style={{
                             width: '100%',
                             maxWidth: '500px',
-                            height: 'fit-content', // Allow it to shrink wrap the card
+                            height: 'fit-content',
                             display: 'flex',
                             justifyContent: 'center'
                         }}
@@ -126,6 +124,7 @@ const WeekCarousel = ({ weeks, onUpdateWeek, onCreateWeek }) => {
                         {currentWeek && (
                             <WeekCard
                                 week={currentWeek}
+                                categories={categories}
                                 onUpdateWeek={(updated) => onUpdateWeek(currentIndex, updated)}
                             />
                         )}
