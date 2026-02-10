@@ -458,15 +458,15 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                         <div className="modal-footer">
                             <div className="summary-row">
                                 <span>Available / Salary</span>
-                                <span>R$ {salary.toFixed(2)}</span>
+                                <span>AED {salary.toFixed(2)}</span>
                             </div>
                             <div className="summary-row total">
                                 <span>Total Spent (Calculated)</span>
-                                <span>R$ {totalCalculatedSpent.toFixed(2)}</span>
+                                <span>AED {totalCalculatedSpent.toFixed(2)}</span>
                             </div>
                             <div className="summary-row" style={{ color: remainingAmount >= 0 ? '#4caf50' : '#ff5252', fontWeight: 'bold' }}>
                                 <span>Remaining Global Balance</span>
-                                <span>R$ {remainingAmount.toFixed(2)}</span>
+                                <span>AED {remainingAmount.toFixed(2)}</span>
                             </div>
 
                             {isEditing && (

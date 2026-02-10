@@ -102,7 +102,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                             </div>
 
                             <div className="form-group">
-                                <label>Amount (R$)</label>
+                                <label>Amount (AED)</label>
                                 <input
                                     type="number"
                                     value={amount}

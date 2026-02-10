@@ -3,7 +3,10 @@
     height: 100vh;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    /* Move card up */
+    padding: 0 30px;
+    /* Horizontal padding to prevent edge swipe conflict */
     position: relative;
     overflow: hidden;
     /* Background handled by global body */
@@ -16,7 +19,8 @@
 
 .carousel-track {
     display: grid;
-    place-items: center;
+    place-items: start center;
+    /* Align to top, center horizontally */
     width: 100%;
     height: 100%;
     position: relative;
