@@ -58,29 +58,56 @@ const swipePower = (offset, velocity) => {
     return Math.abs(offset) * velocity;
 };
 
-const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek }) => {
-    const [currentIndex, setCurrentIndex] = useState(weeks.length - 1);
+const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense }) => {
+    // We rely on parent for index management now.
+    // Internal direction state is fine to keep here for animations
     const [direction, setDirection] = useState(0);
 
     const paginate = (newDirection) => {
-        const nextIndex = currentIndex + newDirection;
+        const nextIndex = activeIndex + newDirection;
         if (nextIndex >= 0 && nextIndex < weeks.length) {
             setDirection(newDirection);
-            setCurrentIndex(nextIndex);
+            onIndexChange(nextIndex);
         } else if (nextIndex >= weeks.length) {
             onCreateWeek();
             setDirection(newDirection);
-            setCurrentIndex(weeks.length);
         }
     };
 
-    const currentWeek = weeks[currentIndex];
+    const currentWeek = weeks[activeIndex];
+
+    // Safety check just in case index is out of bounds (e.g. during reload)
+    if (!currentWeek && weeks.length > 0) {
+        // Parent will likely reset index soon, return null or fallback
+        // onIndexChange(0); // Optional
+        return null;
+    }
+
+    // Handle empty state
+    if (!weeks || weeks.length === 0) {
+        return (
+            <div className="carousel-container">
+                <div className="star-field" />
+                <div style={{ color: 'white', zIndex: 1, textAlign: 'center', marginTop: '50px' }}>
+                    No weeks found for this month.
+                    <br />
+                    <button
+                        className="carousel-nav-btn"
+                        style={{ position: 'static', marginTop: '20px', width: 'auto', padding: '10px 20px' }}
+                        onClick={onCreateWeek}
+                    >
+                        Create First Week
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="carousel-container">
             <div className="star-field" />
 
-            <button className="carousel-nav-btn prev" onClick={() => paginate(-1)} disabled={currentIndex === 0}>
+            <button className="carousel-nav-btn prev" onClick={() => paginate(-1)} disabled={activeIndex === 0}>
                 <ChevronLeft size={24} />
             </button>
 
@@ -91,7 +118,7 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek }) => {
             <div className="carousel-track">
                 <AnimatePresence initial={false} custom={direction}>
                     <motion.div
-                        key={currentIndex}
+                        key={activeIndex}
                         custom={direction}
                         variants={gridVariants}
                         initial="enter"
@@ -125,7 +152,10 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek }) => {
                             <WeekCard
                                 week={currentWeek}
                                 categories={categories}
-                                onUpdateWeek={(updated) => onUpdateWeek(currentIndex, updated)}
+                                onUpdateWeek={(updated) => onUpdateWeek(updated)} // Pass just updated week, parent handles index map
+                                onGlobalAddExpense={onGlobalAddExpense} // Pass global handler
+                                weekNumber={activeIndex + 1}
+                                totalWeeks={weeks.length}
                             />
                         )}
                     </motion.div>

@@ -117,15 +117,6 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                 <select
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        background: 'rgba(255, 255, 255, 0.1)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                                        borderRadius: '4px',
-                                        color: 'white',
-                                        fontSize: '1rem'
-                                    }}
                                 >
                                     <option value="" disabled>Select Category</option>
                                     {categories.map((cat, index) => (
@@ -153,8 +144,9 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                         </form>
                     </motion.div>
                 </motion.div>
-            )}
-        </AnimatePresence>
+            )
+            }
+        </AnimatePresence >
     );
 };
 

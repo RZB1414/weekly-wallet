@@ -1,33 +1,33 @@
 .expense-list-container {
     overflow-y: auto;
-    padding: 0.8rem;
-    /* Less padding on mobile */
+    padding: 0.5rem;
     flex: 1;
     /* Scrollbar styles */
     scrollbar-width: thin;
-    scrollbar-color: var(--color-imperial-red) black;
+    scrollbar-color: var(--color-primary) var(--color-bg);
 }
 
 .expense-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.6rem 0.3rem;
+    padding: 1rem;
     /* Added horizontal padding */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s;
-    background: rgba(4, 3, 3, 0.696);
-    /* Faint background for blur visibility */
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    border-radius: 4px;
-    /* Slight rounding */
-    margin-bottom: 0.5rem;
-    /* Space between items */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 0.8rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.expense-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
 }
 
 .expense-item:active {
-    background: rgba(255, 255, 255, 0.05);
+    transform: scale(0.98);
 }
 
 .expense-info {
@@ -37,10 +37,10 @@
 }
 
 .expense-info h4 {
-    font-family: var(--font-display);
-    font-size: 0.85rem;
-    color: var(--color-imperial-white);
-    letter-spacing: 0.05em;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-text-primary);
     margin-bottom: 0.2rem;
     white-space: nowrap;
     overflow: hidden;
@@ -48,15 +48,17 @@
 }
 
 .expense-date {
-    font-family: monospace;
-    font-size: 0.65rem;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
     color: var(--color-text-secondary);
 }
 
 .expense-amount {
-    font-family: monospace;
+    font-family: var(--font-display);
+    font-weight: 700;
     font-size: 1.2rem;
-    color: var(--color-imperial-red);
+    color: var(--color-text-alert);
+    /* Expense color */
     text-align: right;
     white-space: nowrap;
 }
@@ -72,14 +74,13 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #666;
-    /* Higher contrast usually better */
+    color: #ccc;
     padding: 0.5rem;
-    /* Touch target size */
     transition: color 0.2s;
+    border-radius: 50%;
 }
 
-.btn-delete:active,
 .btn-delete:hover {
-    color: var(--color-imperial-red);
+    color: var(--color-text-alert);
+    background: rgba(255, 68, 68, 0.1);
 }

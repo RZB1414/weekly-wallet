@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import '../styles/MonthlyPlanning.css';
 import { api } from '../lib/api';
 
-const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
+const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPlanSave }) => {
     // View State: 'LIST' | 'DETAIL'
     const [view, setView] = useState('LIST');
     const [isEditing, setIsEditing] = useState(false);
@@ -130,12 +130,17 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                 salary: finalSalary
             });
             setSalary(finalSalary);
-            setIsEditing(false); // Switch back to read-only after save
+
+            if (onPlanSave) {
+                onPlanSave(selectedYear, selectedMonth, categories, finalSalary);
+            }
+
             loadAvailablePlans();
         } catch (error) {
             console.error("Failed to save", error);
         } finally {
             setIsSaving(false);
+            setIsEditing(false); // Ensure we go back to read-only
         }
     };
 
@@ -165,7 +170,41 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
     };
 
     const handleDeleteCategory = (id) => {
+        // Find category to delete
+        const categoryToDelete = categories.find(c => c.id === id);
+
+        // Remove from local categories
         setCategories(categories.filter(c => c.id !== id));
+
+        // Cascade Delete Expenses for this Category & Month
+        if (categoryToDelete && weeks.length > 0) {
+            const updatedWeeks = weeks.map(week => {
+                if (!week.expenses || week.expenses.length === 0) return week;
+
+                const filteredExpenses = week.expenses.filter(exp => {
+                    // Check if expense matches the deleted category
+                    if (exp.category === categoryToDelete.name) {
+                        // Check if specific expense falls within Selected Month/Year
+                        const expDate = new Date(exp.date);
+                        if (expDate.getFullYear() === selectedYear && (expDate.getMonth() + 1) === selectedMonth) {
+                            return false; // Remove!
+                        }
+                    }
+                    return true; // Keep
+                });
+
+                // Only update reference if something changed
+                if (filteredExpenses.length !== week.expenses.length) {
+                    return { ...week, expenses: filteredExpenses };
+                }
+                return week;
+            });
+
+            // If any week changed, update app state
+            if (onUpdateWeeks) {
+                onUpdateWeeks(updatedWeeks);
+            }
+        }
     };
 
     const toggleCategoryExpand = (id) => {
@@ -181,39 +220,33 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
     };
 
     // Calculations
-    // Total ACTUAL Spent (Net) - for display purposes only
-    const totalActualSpent = monthlyExpenses.reduce((sum, exp) => {
-        return exp.type === 'credit' ? sum - exp.amount : sum + exp.amount;
-    }, 0);
+    // Total Spent (Calculated from Spend Budgets + Credit Actuals)
+    const totalCalculatedSpent = useMemo(() => {
+        let total = 0;
 
-    // Remaining Balance Logic:
-    // Salary
-    // - Sum of 'Spend' Category Budgets
-    // - Sum of Actuals in 'Credit' Categories
-    const remainingAmount = useMemo(() => {
-        let deduction = 0;
-        categories.forEach(cat => {
-            if (cat.type === 'spend') {
-                // For 'Spend' categories, we deduct the Budget (allocation).
-                deduction += cat.budget;
-            } else {
-                // For 'Credit' (Standard) categories, we deduct the Actual Spent.
-                deduction += getCategorySpent(cat.name);
-            }
+        // 1. Add Budgets of 'Spend' categories
+        const spendCategories = categories.filter(c => c.type === 'spend');
+        const spendCategoryNames = spendCategories.map(c => c.name);
+
+        spendCategories.forEach(cat => {
+            total += cat.budget;
         });
 
-        // Count uncategorized expenses as deduction (Standard behavior)
-        const knownCategoryNames = categories.map(c => c.name);
-        // Note: monthlyExpenses includes ALL expenses for the month.
-        // We need to find those that are NOT in any known category.
-        const uncategorizedSpent = monthlyExpenses
-            .filter(e => !knownCategoryNames.includes(e.category))
-            .reduce((sum, e) => e.type === 'credit' ? sum - e.amount : sum + e.amount, 0);
+        // 2. Add Actuals of 'Credit' categories AND Uncategorized
+        const relevantExpenses = monthlyExpenses.filter(e => !spendCategoryNames.includes(e.category));
 
-        return salary - deduction - uncategorizedSpent;
+        const relevantActuals = relevantExpenses.reduce((sum, exp) => {
+            return exp.type === 'credit' ? sum - exp.amount : sum + exp.amount;
+        }, 0);
 
-    }, [salary, categories, monthlyExpenses]);
+        return total + relevantActuals;
+    }, [categories, monthlyExpenses]);
 
+    // Remaining Balance Logic:
+    // Salary - Total Spent
+    const remainingAmount = useMemo(() => {
+        return salary - totalCalculatedSpent;
+    }, [salary, totalCalculatedSpent]);
 
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
@@ -386,20 +419,18 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                             {/* Add Category Section */}
                             {isEditing && (
                                 <div className="add-category-section">
-                                    <div className="transaction-type-toggle" style={{ marginBottom: '10px' }}>
+                                    <div className="transaction-type-toggle">
                                         <button
                                             className={`type-btn ${newCategoryType === 'credit' ? 'active credit' : ''}`}
                                             onClick={() => setNewCategoryType('credit')}
-                                            style={{ flex: 1 }}
                                         >
-                                            Credit (Standard)
+                                            Credit
                                         </button>
                                         <button
                                             className={`type-btn ${newCategoryType === 'spend' ? 'active expense' : ''}`}
                                             onClick={() => setNewCategoryType('spend')}
-                                            style={{ flex: 1 }}
                                         >
-                                            Spend (Deduct Budget)
+                                            Spend
                                         </button>
                                     </div>
                                     <div className="add-category-form">
@@ -416,9 +447,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                                             value={newCategoryBudget}
                                             onChange={e => setNewCategoryBudget(e.target.value)}
                                             className="add-item-input"
-                                            style={{ maxWidth: '100px' }}
                                         />
-                                        <button className="add-btn" onClick={handleAddCategory}>Add Cat</button>
+                                        <button className="add-btn" onClick={handleAddCategory} title="Add Category">+</button>
                                     </div>
                                 </div>
                             )}
@@ -431,8 +461,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [] }) => {
                                 <span>R$ {salary.toFixed(2)}</span>
                             </div>
                             <div className="summary-row total">
-                                <span>Total Spent (Net Actuals)</span>
-                                <span>R$ {totalActualSpent.toFixed(2)}</span>
+                                <span>Total Spent (Calculated)</span>
+                                <span>R$ {totalCalculatedSpent.toFixed(2)}</span>
                             </div>
                             <div className="summary-row" style={{ color: remainingAmount >= 0 ? '#4caf50' : '#ff5252', fontWeight: 'bold' }}>
                                 <span>Remaining Global Balance</span>

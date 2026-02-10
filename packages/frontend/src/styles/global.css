@@ -1,56 +1,44 @@
 :root {
-  /* Imperial Palette */
-  --color-bg: #050505;
-  /* Deep Space Black */
-  --color-panel: rgba(26, 26, 26, 0.4);
-  /* More Transparent Dark Metal */
-  --color-panel-light: #2a2a2a;
+  /* Paleta Solar Vibrante */
+  --color-bg: #FFF9F0;
+  /* Creme Quente e Acolhedor */
+  --color-panel: rgba(255, 255, 255, 0.7);
+  --color-panel-light: #ffffff;
+  --color-primary: #FF8C00;
+  /* Laranja Pôr-do-Sol */
+  /* --color-accent: #FFD700; Ouro Vibrante */
+  --color-soft-gray: #E0D7C6;
+  --color-text-primary: #4A2C00;
+  /* Marrom Café */
+  --color-text-secondary: #8B5E3C;
+  --color-text-alert: #FF4444;
 
-  --color-imperial-red: #ff0015;
-  /* Vader Saber Red */
-  --color-imperial-white: #f0f0f0;
-  /* Stormtrooper White */
-  --color-imperial-gray: #8899a6;
-  /* Hull Gray */
-
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #a0a0a0;
-  --color-text-alert: #ff4444;
-
-  --font-display: 'Orbitron', sans-serif;
+  /* Tipografia: De 'Militar' para 'Amigável' */
+  --font-display: 'Fredoka', 'Quicksand', sans-serif;
   --font-body: 'Inter', sans-serif;
 
-  --card-border-radius: 4px;
-  /* Sharp corners for Imperial look */
-  --imperial-border: 1px solid rgba(255, 255, 255, 0.1);
-  --imperial-glow: 0 0 15px rgba(255, 0, 21, 0.3);
-
-  --glass-panel: rgba(20, 20, 20, 0.95);
+  --card-border-radius: 24px;
+  /* Cantos Super Arredondados */
+  --happy-border: 1px solid rgba(255, 140, 0, 0.1);
+  --happy-glow: 0 10px 30px rgba(255, 140, 0, 0.25);
+  --glass-panel: rgba(255, 255, 255, 0.5);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 body {
   background-color: var(--color-bg);
-  background-image: url('/background.png');
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-attachment: fixed;
-  background-size: cover;
   color: var(--color-text-primary);
   font-family: var(--font-body);
-  overflow: hidden;
-  height: 100vh;
+  overflow-x: hidden;
+  min-height: 100vh;
   width: 100vw;
-}
-
-#root {
-  height: 100%;
-  width: 100%;
+  /* Removido o background-image escuro para focar no calor do creme */
 }
 
 h1,
@@ -59,20 +47,21 @@ h3,
 h4,
 button {
   font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  text-transform: none;
+  /* Removemos o UPPERCASE autoritário */
+  letter-spacing: -0.02em;
 }
 
-/* Custom Scrollbar for Imperial terminals */
+/* Barra de rolagem 'Sunny' */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: black;
+  background: var(--color-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-imperial-red);
-  border-radius: 0;
+  background: var(--color-primary);
+  border-radius: 10px;
 }

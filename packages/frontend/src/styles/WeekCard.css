@@ -1,11 +1,10 @@
 .week-card {
-    /* Angled corners via clip-path for that Star Destroyer window look */
-    /* Simplified clip-path for mobile to maximize space, or keep it subtle */
-    clip-path: polygon(15px 0, 100% 0,
-            100% calc(100% - 15px), calc(100% - 15px) 100%,
-            0 100%, 0 15px);
-    border-left: 2px solid var(--color-imperial-red);
-    /* Thinner border for mobile */
+    /* Happy rounded corners */
+    border-radius: var(--card-border-radius);
+    border: 1px solid white;
+    background: rgba(255, 255, 255, 0.85);
+    /* Milky glass effect */
+    backdrop-filter: blur(10px);
     padding: 1.5rem 1rem;
     /* Compact padding */
     width: 95%;
@@ -19,186 +18,209 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+    box-shadow: var(--happy-glow);
+    transition: transform 0.3s ease;
 }
 
-/* "Tech" lines overlay - simplified for mobile performance/visual noise */
+.week-card:hover {
+    transform: translateY(-5px);
+}
+
+/* "Tech" lines overlay REMOVED */
 .week-card::after {
-    content: '';
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    bottom: 5px;
-    left: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    pointer-events: none;
-    z-index: 1;
+    content: none;
 }
 
-/* Header: Tactical Display */
+/* Header: Friendly Display */
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* Center alignment for mobile */
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--color-imperial-red);
-    padding-bottom: 0.5rem;
+    border-bottom: 2px dashed var(--color-soft-gray);
+    padding-bottom: 1rem;
     z-index: 2;
 }
 
 .week-title {
-    font-size: 1.1rem;
-    /* Smaller font for mobile */
-    color: var(--color-imperial-white);
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    /* text-shadow removed for cleanliness */
 }
 
 .week-status {
-    font-size: 0.6rem;
-    color: var(--color-imperial-red);
-    border: 1px solid var(--color-imperial-red);
-    padding: 0.1rem 0.5rem;
-    background: rgba(255, 0, 21, 0.1);
-    letter-spacing: 0.1em;
-}
-
-/* Balance: Main Gauge */
-.balance-section {
-    text-align: right;
-    margin-bottom: 1.5rem;
-    z-index: 2;
-    position: relative;
-    padding-right: 0.5rem;
-}
-
-.balance-label {
-    font-size: 0.7rem;
-    color: var(--color-imperial-gray);
-    letter-spacing: 0.2em;
-    margin-bottom: 0.2rem;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-soft-gray);
+    border-radius: 20px;
+    padding: 0.2rem 0.8rem;
+    background: white;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
-.balance-amount {
-    font-family: var(--font-display);
-    font-size: 3rem;
-    /* Smaller prominent size */
-    font-weight: 900;
-    color: var(--color-imperial-white);
-    line-height: 1;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+.week-status.active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: rgba(255, 140, 0, 0.1);
 }
 
-.balance-amount.positive {
-    color: var(--color-imperial-white);
+.week-status.completed {
+    color: #888;
+    border-color: #ccc;
+    background: #f5f5f5;
+    /* text-decoration: line-through; Optional */
 }
 
-.balance-amount.low {
-    color: var(--color-imperial-red);
-    text-shadow: 0 0 20px var(--color-imperial-red);
-    animation: alertPulse 2s infinite;
+.week-status.upcoming {
+    color: #007bff;
+    border-color: #007bff;
+    background: rgba(0, 123, 255, 0.1);
 }
 
-@keyframes alertPulse {
-    0% {
-        opacity: 1;
-        text-shadow: 0 0 20px var(--color-imperial-red);
-    }
 
-    50% {
-        opacity: 0.8;
-        text-shadow: 0 0 10px var(--color-imperial-red);
-    }
-
-    100% {
-        opacity: 1;
-        text-shadow: 0 0 20px var(--color-imperial-red);
-    }
-}
-
-.initial-balance-input {
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--color-imperial-gray);
-    color: var(--color-imperial-gray);
-    text-align: right;
-    font-family: var(--font-display);
-    font-size: 1rem;
-    width: 100px;
-    transition: all 0.3s;
-}
-
-.initial-balance-input:focus {
-    border-color: var(--color-imperial-red);
-    color: var(--color-imperial-white);
-}
 
 /* Content Area */
 .card-content {
     flex: 1;
     display: flex;
     flex-direction: column;
-    /* background removed for full transparency */
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: none;
+    /* Removed border */
     margin-bottom: 1rem;
     position: relative;
     overflow: hidden;
-    /* Ensure list doesn't spill */
 }
 
-/* Push-button for adding expense - Mobile optimized position */
+/* Floating Action Button for adding expense */
 .add-expense-btn {
-    background: var(--color-imperial-red);
+    background: var(--color-primary);
     color: white;
     border: none;
-    width: 50px;
-    /* Slightly smaller */
-    height: 50px;
-    /* Hexagon shape roughly */
-    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    /* Perfect Circle */
+    clip-path: none;
+    /* Removed Hexagon */
     position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    /* Inside card for mobile safety */
-    box-shadow: 0 0 20px rgba(255, 0, 21, 0.4);
+    bottom: 7rem;
+    right: 1.5rem;
+    box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Bouncy */
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.5rem;
 }
 
 .add-expense-btn:hover {
-    transform: scale(1.1);
-    background: #ff3344;
+    transform: scale(1.1) rotate(90deg);
+    background: #FF9F1C;
 }
-
 
 /* Desktop overrides */
 @media (min-width: 768px) {
     .week-card {
-        padding: 2rem;
+        padding: 2.5rem;
         width: 100%;
         margin: 0 auto;
-        border-left-width: 4px;
+        /* border-left-width removed */
     }
 
     .week-title {
-        font-size: 1.5rem;
+        font-size: 2rem;
     }
 
-    .balance-amount {
-        font-size: 4.5rem;
-    }
+
 
     .add-expense-btn {
-        width: 60px;
-        height: 60px;
-        right: -2rem;
-        /* Hanging style only on desktop */
-        bottom: 2rem;
+        width: 70px;
+        height: 70px;
+        right: -35px;
+        /* Hanging outside */
+        bottom: 3rem;
     }
+}
 
+/* View Tabs */
+.view-tabs {
+    display: flex;
+    background: rgba(230, 230, 230, 0.5);
+    border-radius: 15px;
+    padding: 3px;
+    margin-top: 5px;
+}
+
+.view-tab {
+    background: transparent;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-tab.active {
+    background: white;
+    color: var(--color-primary);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Supermarket View */
+.supermarket-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.supermarket-summary {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 15px;
+    margin-bottom: 1rem;
+    border: 1px dashed var(--color-soft-gray);
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.summary-item.main {
+    align-items: flex-end;
+}
+
+.summary-item .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: 2px;
+}
+
+.summary-item .value {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.summary-item .value.positive {
+    color: #4caf50;
+}
+
+.summary-item .value.negative {
+    color: #ff5252;
 }
