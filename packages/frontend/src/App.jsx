@@ -145,6 +145,25 @@ const App = () => {
         setSelectedYear(nextYear);
     };
 
+    // Calculate Total Savings (Global: expenses + monthly budget)
+    const totalSavings = React.useMemo(() => {
+        if (!weeks) return 0;
+        // Sum all savings expenses across all weeks
+        const expenseSavings = weeks.reduce((total, week) => {
+            if (!week.expenses) return total;
+            const weekSavings = week.expenses
+                .filter(e => e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança')
+                .reduce((sum, e) => sum + e.amount, 0);
+            return total + weekSavings;
+        }, 0);
+
+        // Add the savings category budget from Monthly Planning
+        const savingsCat = activeCategories.find(c => c.name.toLowerCase() === 'savings' || c.name.toLowerCase() === 'poupança');
+        const savingsBudget = savingsCat ? (savingsCat.budget || 0) : 0;
+
+        return expenseSavings + savingsBudget;
+    }, [weeks, activeCategories]);
+
     // State for Carousel Index
     const [activeIndex, setActiveIndex] = useState(0);
 
@@ -239,7 +258,9 @@ const App = () => {
                 onCreateWeek={handleCreateWeek}
                 activeIndex={activeIndex}
                 onIndexChange={setActiveIndex}
+                totalSavings={totalSavings}
             />
+
 
             <button
                 className="monthly-planning-btn"
@@ -307,7 +328,7 @@ const App = () => {
                             gap: '8px'
                         }}
                     >
-                        <span>🚀</span> Current Week
+                        Current Week
                     </button>
                 );
             })()}

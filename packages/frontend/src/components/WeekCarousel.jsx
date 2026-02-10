@@ -58,7 +58,7 @@ const swipePower = (offset, velocity) => {
     return Math.abs(offset) * velocity;
 };
 
-const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense }) => {
+const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense, totalSavings }) => {
     // We rely on parent for index management now.
     // Internal direction state is fine to keep here for animations
     const [direction, setDirection] = useState(0);
@@ -75,6 +75,18 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
     };
 
     const currentWeek = weeks[activeIndex];
+
+    // Calculate Current Month Savings (from displayed weeks)
+    const currentMonthSavings = React.useMemo(() => {
+        if (!weeks) return 0;
+        return weeks.reduce((total, week) => {
+            if (!week.expenses) return total;
+            const weekSavings = week.expenses
+                .filter(e => e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança')
+                .reduce((sum, e) => sum + e.amount, 0);
+            return total + weekSavings;
+        }, 0);
+    }, [weeks]);
 
     // Safety check just in case index is out of bounds (e.g. during reload)
     if (!currentWeek && weeks.length > 0) {
@@ -156,6 +168,8 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
                                 onGlobalAddExpense={onGlobalAddExpense} // Pass global handler
                                 weekNumber={activeIndex + 1}
                                 totalWeeks={weeks.length}
+                                totalSavings={totalSavings}
+                                currentMonthSavings={currentMonthSavings}
                             />
                         )}
                     </motion.div>

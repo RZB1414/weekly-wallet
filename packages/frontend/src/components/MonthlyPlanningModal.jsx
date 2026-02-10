@@ -24,6 +24,9 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     const [newCategoryBudget, setNewCategoryBudget] = useState('');
     const [newCategoryType, setNewCategoryType] = useState('credit'); // 'credit' (standard) | 'spend' (deducts budget)
     const [expandedCategoryId, setExpandedCategoryId] = useState(null);
+    const [editingCategoryId, setEditingCategoryId] = useState(null);
+    const [editCategoryName, setEditCategoryName] = useState('');
+    const [editCategoryBudget, setEditCategoryBudget] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -170,45 +173,68 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     };
 
     const handleDeleteCategory = (id) => {
-        // Find category to delete
-        const categoryToDelete = categories.find(c => c.id === id);
+        if (window.confirm("Are you sure you want to delete this category?")) {
+            // Find category to delete
+            const categoryToDelete = categories.find(c => c.id === id);
 
-        // Remove from local categories
-        setCategories(categories.filter(c => c.id !== id));
+            // Remove from local categories
+            setCategories(categories.filter(c => c.id !== id));
 
-        // Cascade Delete Expenses for this Category & Month
-        if (categoryToDelete && weeks.length > 0) {
-            const updatedWeeks = weeks.map(week => {
-                if (!week.expenses || week.expenses.length === 0) return week;
+            // Cascade Delete Expenses for this Category & Month
+            if (categoryToDelete && weeks.length > 0) {
+                const updatedWeeks = weeks.map(week => {
+                    if (!week.expenses || week.expenses.length === 0) return week;
 
-                const filteredExpenses = week.expenses.filter(exp => {
-                    // Check if expense matches the deleted category
-                    if (exp.category === categoryToDelete.name) {
-                        // Check if specific expense falls within Selected Month/Year
-                        const expDate = new Date(exp.date);
-                        if (expDate.getFullYear() === selectedYear && (expDate.getMonth() + 1) === selectedMonth) {
-                            return false; // Remove!
+                    const filteredExpenses = week.expenses.filter(exp => {
+                        // Check if expense matches the deleted category
+                        if (exp.category === categoryToDelete.name) {
+                            // Check if specific expense falls within Selected Month/Year
+                            const expDate = new Date(exp.date);
+                            if (expDate.getFullYear() === selectedYear && (expDate.getMonth() + 1) === selectedMonth) {
+                                return false; // Remove!
+                            }
                         }
+                        return true; // Keep
+                    });
+
+                    // Only update reference if something changed
+                    if (filteredExpenses.length !== week.expenses.length) {
+                        return { ...week, expenses: filteredExpenses };
                     }
-                    return true; // Keep
+                    return week;
                 });
 
-                // Only update reference if something changed
-                if (filteredExpenses.length !== week.expenses.length) {
-                    return { ...week, expenses: filteredExpenses };
+                // If any week changed, update app state
+                if (onUpdateWeeks) {
+                    onUpdateWeeks(updatedWeeks);
                 }
-                return week;
-            });
-
-            // If any week changed, update app state
-            if (onUpdateWeeks) {
-                onUpdateWeeks(updatedWeeks);
             }
         }
     };
 
     const toggleCategoryExpand = (id) => {
         setExpandedCategoryId(expandedCategoryId === id ? null : id);
+    };
+
+    const handleStartEditCategory = (cat) => {
+        setEditingCategoryId(cat.id);
+        setEditCategoryName(cat.name);
+        setEditCategoryBudget(cat.budget.toString());
+    };
+
+    const handleSaveEditCategory = (id) => {
+        const budgetVal = parseFloat(editCategoryBudget);
+        setCategories(categories.map(c => {
+            if (c.id === id) {
+                return {
+                    ...c,
+                    name: editCategoryName.trim() || c.name,
+                    budget: !isNaN(budgetVal) ? budgetVal : c.budget
+                };
+            }
+            return c;
+        }));
+        setEditingCategoryId(null);
     };
 
     // Helper to calculate spent per category
@@ -365,51 +391,98 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                             onClick={() => toggleCategoryExpand(cat.id)}
                                             style={{ cursor: 'pointer', borderLeft: cat.type === 'spend' ? '4px solid #ff5252' : '1px solid rgba(255,255,255,0.1)' }}
                                         >
-                                            <div className="cat-sum-header">
-                                                <span>{cat.name} <small style={{ fontWeight: 'normal', opacity: 0.7, fontSize: '0.7em' }}>({cat.type === 'spend' ? 'Spend' : 'Credit'})</small></span>
-                                                <span>R$ {cat.budget.toFixed(2)}</span>
-                                            </div>
-                                            <div className="cat-sum-row">
-                                                <span>Spent:</span>
-                                                <span>R$ {cat.spent.toFixed(2)}</span>
-                                            </div>
-                                            <div className={`cat-sum-remaining ${cat.remaining < 0 ? 'negative' : 'positive'}`}>
-                                                <span>Remaining:</span>
-                                                <span>R$ {cat.remaining.toFixed(2)}</span>
-                                            </div>
-
-                                            {/* Expandable Expense List */}
-                                            {expandedCategoryId === cat.id && (
-                                                <div className="cat-expenses-list" onClick={e => e.stopPropagation()}>
-                                                    <h4>Transactions</h4>
-                                                    {cat.expenses.length === 0 ? (
-                                                        <div className="no-expenses">No transactions</div>
-                                                    ) : (
-                                                        <ul>
-                                                            {cat.expenses.map(exp => (
-                                                                <li key={exp.id} className="cat-expense-item">
-                                                                    <span>{exp.name}</span>
-                                                                    <span className={exp.type === 'credit' ? 'credit-text' : 'expense-text'}>
-                                                                        {exp.type === 'credit' ? '+' : '-'} R$ {exp.amount.toFixed(2)}
-                                                                    </span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    )}
+                                            {editingCategoryId === cat.id ? (
+                                                <div className="cat-edit-form" onClick={e => e.stopPropagation()}>
+                                                    <input
+                                                        type="text"
+                                                        value={editCategoryName}
+                                                        onChange={e => setEditCategoryName(e.target.value)}
+                                                        className="add-item-input"
+                                                        placeholder="Category name"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        value={editCategoryBudget}
+                                                        onChange={e => setEditCategoryBudget(e.target.value)}
+                                                        className="add-item-input"
+                                                        placeholder="Budget"
+                                                    />
+                                                    <div style={{ display: 'flex', gap: '8px', marginTop: '5px' }}>
+                                                        <button
+                                                            className="add-btn"
+                                                            onClick={() => handleSaveEditCategory(cat.id)}
+                                                            style={{ fontSize: '0.8rem', padding: '4px 12px' }}
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingCategoryId(null)}
+                                                            style={{ fontSize: '0.8rem', padding: '4px 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '6px', cursor: 'pointer' }}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            )}
+                                            ) : (
+                                                <>
+                                                    <div className="cat-sum-header">
+                                                        <span>{cat.name} <small style={{ fontWeight: 'normal', opacity: 0.7, fontSize: '0.7em' }}>({cat.type === 'spend' ? 'Spend' : 'Credit'})</small></span>
+                                                        <span>AED {cat.budget.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="cat-sum-row">
+                                                        <span>Spent:</span>
+                                                        <span>AED {cat.spent.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className={`cat-sum-remaining ${cat.remaining < 0 ? 'negative' : 'positive'}`}>
+                                                        <span>Remaining:</span>
+                                                        <span>AED {cat.remaining.toFixed(2)}</span>
+                                                    </div>
 
-                                            {isEditing && (
-                                                <button
-                                                    className="delete-cat-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteCategory(cat.id);
-                                                    }}
-                                                    style={{ marginTop: '5px', background: 'transparent', border: 'none', color: '#ff5252', cursor: 'pointer', fontSize: '0.8rem' }}
-                                                >
-                                                    Remove Category
-                                                </button>
+                                                    {/* Expandable Expense List */}
+                                                    {expandedCategoryId === cat.id && (
+                                                        <div className="cat-expenses-list" onClick={e => e.stopPropagation()}>
+                                                            <h4>Transactions</h4>
+                                                            {cat.expenses.length === 0 ? (
+                                                                <div className="no-expenses">No transactions</div>
+                                                            ) : (
+                                                                <ul>
+                                                                    {cat.expenses.map(exp => (
+                                                                        <li key={exp.id} className="cat-expense-item">
+                                                                            <span>{exp.name}</span>
+                                                                            <span className={exp.type === 'credit' ? 'credit-text' : 'expense-text'}>
+                                                                                {exp.type === 'credit' ? '+' : '-'} AED {exp.amount.toFixed(2)}
+                                                                            </span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {isEditing && (
+                                                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleStartEditCategory(cat);
+                                                                }}
+                                                                style={{ background: 'transparent', border: 'none', color: '#64b5f6', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                            >
+                                                                ✏️ Edit
+                                                            </button>
+                                                            <button
+                                                                className="delete-cat-btn"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteCategory(cat.id);
+                                                                }}
+                                                                style={{ background: 'transparent', border: 'none', color: '#ff5252', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                            >
+                                                                🗑️ Remove
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     ))}

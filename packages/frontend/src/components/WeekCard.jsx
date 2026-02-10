@@ -6,10 +6,8 @@ import AddExpenseModal from './AddExpenseModal';
 import { formatCurrency, calculateRemaining, getWeekRange, formatDate } from '../lib/utils';
 import '../styles/WeekCard.css';
 
-const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks }) => {
+const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-
 
     const handleAddExpense = (expense) => {
         if (onGlobalAddExpense) {
@@ -22,8 +20,10 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
     };
 
     const handleDeleteExpense = (id) => {
-        const updatedExpenses = week.expenses.filter(e => e.id !== id);
-        onUpdateWeek({ ...week, expenses: updatedExpenses });
+        if (window.confirm("Are you sure you want to delete this expense?")) {
+            const updatedExpenses = week.expenses.filter(e => e.id !== id);
+            onUpdateWeek({ ...week, expenses: updatedExpenses });
+        }
     };
 
 
@@ -64,33 +64,44 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
     // Coffee Logic
     const coffeeCategory = categories.find(c => c.name.toLowerCase() === 'coffee' || c.name.toLowerCase() === 'café');
     const monthlyCoffeeBudget = coffeeCategory ? (coffeeCategory.budget || 0) : 0;
-    // const weeklyCoffeeBudget = monthlyCoffeeBudget / 4; // Use full monthly budget as requested
 
     const coffeeExpenses = week.expenses.filter(e =>
         e.category.toLowerCase() === 'coffee' || e.category.toLowerCase() === 'café'
     );
     const coffeeSpent = coffeeExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const coffeeRemaining = monthlyCoffeeBudget - coffeeSpent; // Calculate against monthly budget
+    const coffeeRemaining = monthlyCoffeeBudget - coffeeSpent;
+
+    // Savings Logic
+    const savingsCategory = categories.find(c => c.name.toLowerCase() === 'savings' || c.name.toLowerCase() === 'poupança');
+    const monthlySavingsBudget = savingsCategory ? (savingsCategory.budget || 0) : 0;
+
+    const savingsExpenses = week.expenses.filter(e =>
+        e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança'
+    );
+    const savingsSpent = savingsExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const savingsRemaining = monthlySavingsBudget - savingsSpent;
 
     return (
         <div className={`week-card ${status.toLowerCase()}`}>
             <div className="card-header">
-                <div>
-                    <h3 className="week-title">
-                        {week.startDate && week.endDate
-                            ? `${formatDate(week.startDate).slice(0, 5)} - ${formatDate(week.endDate).slice(0, 5)}`
-                            : getWeekRange(week.startDate)
-                        }
-                    </h3>
-                    {weekNumber && totalWeeks && (
-                        <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '0.5rem' }}>
-                            Week {weekNumber} of {totalWeeks}
-                        </span>
-                    )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h3 className="week-title">
+                            {week.startDate && week.endDate
+                                ? `${formatDate(week.startDate).slice(0, 5)} - ${formatDate(week.endDate).slice(0, 5)}`
+                                : getWeekRange(week.startDate)
+                            }
+                        </h3>
+                        {weekNumber && totalWeeks && (
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                Week {weekNumber}/{totalWeeks}
+                            </span>
+                        )}
+                        <span className={`week-status ${status.toLowerCase()}`}>{status}</span>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
-                    <span className={`week-status ${status.toLowerCase()}`}>{status}</span>
 
+                <div className="header-actions">
                     {/* View Tabs */}
                     <div className="view-tabs">
                         <button
@@ -110,6 +121,12 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                             onClick={() => setViewMode('COFFEE')}
                         >
                             Coffee
+                        </button>
+                        <button
+                            className={`view-tab ${viewMode === 'SAVINGS' ? 'active' : ''}`}
+                            onClick={() => setViewMode('SAVINGS')}
+                        >
+                            Savings
                         </button>
                     </div>
                 </div>
@@ -153,6 +170,24 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                             </div>
                         </div>
                         <ExpenseList expenses={coffeeExpenses} onDelete={handleDeleteExpense} />
+                    </div>
+                )}
+
+                {viewMode === 'SAVINGS' && (
+                    <div className="supermarket-view">
+                        <div className="supermarket-summary">
+                            <div className="summary-item">
+                                <span className="label">Saved this month</span>
+                                <span className="value">{formatCurrency((monthlySavingsBudget || 0) + (currentMonthSavings || 0))}</span>
+                            </div>
+                            <div className="summary-item main">
+                                <span className="label">Total saved</span>
+                                <span className={`value positive`}>
+                                    {formatCurrency(totalSavings || 0)}
+                                </span>
+                            </div>
+                        </div>
+                        <ExpenseList expenses={savingsExpenses} onDelete={handleDeleteExpense} />
                     </div>
                 )}
             </div>
