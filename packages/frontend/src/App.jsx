@@ -13,6 +13,9 @@ import MonthlyPlanningModal from './components/MonthlyPlanningModal';
 const App = () => {
     const { user, loading: authLoading, logout, changePassword } = useAuth();
 
+    // ── User Menu Dropdown ────────────────────────
+    const [showUserMenu, setShowUserMenu] = useState(false);
+
     // ── Password Reset via URL ────────────────────
     const [resetMode, setResetMode] = useState(false);
     const [resetToken, setResetToken] = useState('');
@@ -109,6 +112,13 @@ const App = () => {
         loadData();
     }, [user]);
 
+    // Default categories for new months
+    const defaultCategories = [
+        { name: 'Supermarket', budget: 0, type: 'credit' },
+        { name: 'Coffee', budget: 0, type: 'credit' },
+        { name: 'Savings', budget: 0, type: 'credit' },
+    ];
+
     // Load Categories for Selected Month
     useEffect(() => {
         if (!user) return;
@@ -116,15 +126,15 @@ const App = () => {
         const loadPlanning = async () => {
             try {
                 const plan = await api.getMonthlyPlanning(selectedYear, selectedMonth);
-                if (plan && plan.categories) {
+                if (plan && plan.categories && plan.categories.length > 0) {
                     const cats = plan.categories.map(c => typeof c === 'string' ? { name: c, budget: 0 } : c);
                     setActiveCategories(cats);
                 } else {
-                    setActiveCategories([]);
+                    setActiveCategories(defaultCategories);
                 }
             } catch (error) {
                 console.error("Failed to load planning", error);
-                setActiveCategories([]);
+                setActiveCategories(defaultCategories);
             }
         };
         loadPlanning();
@@ -277,21 +287,30 @@ const App = () => {
 
     return (
         <div className="app-container">
-            {/* User Header Bar */}
-            <div className="user-header-bar">
-                <div className="user-info">
-                    <div className="user-avatar">🐱</div>
-                    <span>{user.email}</span>
-                </div>
-                <div className="user-actions">
-                    <button className="btn-change-pwd" onClick={() => setShowChangePwd(true)}>
-                        🔑 Password
-                    </button>
-                    <button className="btn-logout" onClick={logout}>
-                        Logout
-                    </button>
-                </div>
+            {/* Floating User Avatar */}
+            <div className="user-avatar-floating" onClick={() => setShowUserMenu(!showUserMenu)}>
+                🐱
             </div>
+
+            {/* User Menu Dropdown */}
+            {showUserMenu && (
+                <>
+                    <div className="user-menu-backdrop" onClick={() => setShowUserMenu(false)} />
+                    <div className="user-menu-dropdown">
+                        <div className="user-menu-header">
+                            <div className="user-menu-avatar">🐱</div>
+                            <div className="user-menu-email">{user.email}</div>
+                        </div>
+                        <div className="user-menu-divider" />
+                        <button className="user-menu-item" onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}>
+                            🔑 Change Password
+                        </button>
+                        <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
+                            🚪 Logout
+                        </button>
+                    </div>
+                </>
+            )}
 
             {/* Month/Year Selection Header */}
             <div className="filter-header" style={{

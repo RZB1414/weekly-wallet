@@ -77,6 +77,12 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         }
     };
 
+    const defaultCategories = () => [
+        { id: crypto.randomUUID(), name: 'Supermarket', budget: 0, type: 'credit' },
+        { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit' },
+        { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit' },
+    ];
+
     const loadData = async () => {
         setIsLoading(true);
         try {
@@ -90,12 +96,12 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                 return { ...cat, type: cat.type || 'credit' }; // Ensure type exists
             });
 
-            setCategories(loadedCategories);
+            setCategories(loadedCategories.length > 0 ? loadedCategories : defaultCategories());
             setSalary(data.salary || 0);
             setSalaryInput(data.salary ? data.salary.toString() : '');
         } catch (error) {
             console.error("Failed to load monthly planning", error);
-            setCategories([]);
+            setCategories(defaultCategories());
             setSalary(0);
             setSalaryInput('');
         } finally {
@@ -109,7 +115,11 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setSelectedMonth(now.getMonth() + 1);
         setIsEditing(true);
         setView('DETAIL');
-        setCategories([]);
+        setCategories([
+            { id: crypto.randomUUID(), name: 'Supermarket', budget: 0, type: 'credit' },
+            { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit' },
+            { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit' },
+        ]);
         setSalary(0);
         setSalaryInput('');
     };

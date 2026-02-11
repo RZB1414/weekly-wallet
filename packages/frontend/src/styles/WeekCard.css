@@ -181,28 +181,44 @@
 /* View Tabs */
 .view-tabs {
     display: flex;
-    background: rgba(230, 230, 230, 0.5);
-    border-radius: 15px;
-    padding: 3px;
-    margin-top: 5px;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: rgba(255, 200, 120, 0.15);
+    border: 1px solid rgba(255, 140, 0, 0.12);
+    border-radius: 16px;
+    padding: 4px;
+    width: 100%;
 }
 
 .view-tab {
+    flex: 1;
+    min-width: 0;
     background: transparent;
     border: none;
-    padding: 5px 10px;
+    padding: 7px 4px;
     border-radius: 12px;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.view-tab:hover {
+    background: rgba(255, 140, 0, 0.08);
+    color: var(--color-primary);
 }
 
 .view-tab.active {
     background: white;
     color: var(--color-primary);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(255, 140, 0, 0.15);
+    font-weight: 700;
 }
 
 /* Supermarket View */
