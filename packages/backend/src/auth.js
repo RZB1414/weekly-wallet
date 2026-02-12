@@ -120,6 +120,14 @@ auth.post('/register', async (c) => {
 
     await putUser(bucket, email, user);
 
+    // Create Telegram username index for forgot-password lookup
+    if (user.telegramUsername) {
+        await bucket.put(
+            `telegram-index/${user.telegramUsername.toLowerCase()}.json`,
+            JSON.stringify({ email: email.toLowerCase() })
+        );
+    }
+
     // Generate JWT
     const token = await sign(
         {
@@ -270,15 +278,22 @@ auth.post('/link-telegram', authMiddleware(), async (c) => {
 
 auth.post('/forgot-password', async (c) => {
     const bucket = c.env.WEEKLY_WALLET_BUCKET;
-    const { email } = await c.req.json();
+    const { telegramUsername } = await c.req.json();
 
-    const genericResponse = { success: true, message: 'If an account exists, a reset code has been sent.' };
+    const genericResponse = { success: true, message: 'If an account exists, a reset code has been sent via Telegram.' };
 
-    // Always return success to prevent email enumeration
-    if (!email) {
+    if (!telegramUsername) {
+        return c.json({ error: 'Telegram username is required' }, 400);
+    }
+
+    // Look up email from telegram username index
+    const cleanUsername = telegramUsername.replace(/^@/, '').trim().toLowerCase();
+    const indexObj = await bucket.get(`telegram-index/${cleanUsername}.json`);
+    if (!indexObj) {
         return c.json(genericResponse);
     }
 
+    const { email } = await indexObj.json();
     const user = await getUser(bucket, email);
     if (!user) {
         return c.json(genericResponse);

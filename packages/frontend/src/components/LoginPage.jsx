@@ -40,9 +40,14 @@ const LoginPage = () => {
                     setError(result.error);
                 }
             } else if (mode === 'forgot') {
-                const result = await api.auth.forgotPassword(email);
+                if (!telegramUsername.trim()) {
+                    setError('Please enter your Telegram username');
+                    setLoading(false);
+                    return;
+                }
+                const result = await api.auth.forgotPassword(telegramUsername);
                 if (result.success) {
-                    setSuccess('A reset code has been sent to your Telegram or email.');
+                    setSuccess('A reset code has been sent to your Telegram.');
                     // Switch to code entry mode after short delay
                     setTimeout(() => {
                         setMode('verify-code');
@@ -90,8 +95,8 @@ const LoginPage = () => {
         switch (mode) {
             case 'login': return 'Welcome back! Sign in to your account.';
             case 'register': return 'Create your secure account.';
-            case 'forgot': return 'Enter your email to reset your password.';
-            case 'verify-code': return 'Enter the 6-digit code sent to your Telegram or email.';
+            case 'forgot': return 'Enter your Telegram username to receive a reset code.';
+            case 'verify-code': return 'Enter the 6-digit code sent to your Telegram.';
             case 'reset': return 'Create a new password for your account.';
             default: return '';
         }
@@ -101,7 +106,7 @@ const LoginPage = () => {
         switch (mode) {
             case 'login': return '🔐 Sign In';
             case 'register': return '✨ Create Account';
-            case 'forgot': return '📨 Send Reset Code';
+            case 'forgot': return '� Send Reset Code';
             case 'verify-code': return '✅ Verify Code';
             case 'reset': return '🔑 Reset Password';
             default: return 'Submit';
@@ -120,8 +125,8 @@ const LoginPage = () => {
 
                 {/* Form */}
                 <form className="login-form" onSubmit={handleSubmit}>
-                    {/* Email — shown in login, register, forgot */}
-                    {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
+                    {/* Email — shown in login, register only */}
+                    {(mode === 'login' || mode === 'register') && (
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
                             <input
@@ -133,6 +138,25 @@ const LoginPage = () => {
                                 required
                                 autoComplete="email"
                             />
+                        </div>
+                    )}
+
+                    {/* Telegram Username — forgot mode */}
+                    {mode === 'forgot' && (
+                        <div className="form-group">
+                            <label htmlFor="forgot-telegram">Telegram Username</label>
+                            <input
+                                id="forgot-telegram"
+                                type="text"
+                                value={telegramUsername}
+                                onChange={(e) => setTelegramUsername(e.target.value)}
+                                placeholder="@your_username"
+                                required
+                                autoComplete="off"
+                            />
+                            <small style={{ color: 'var(--color-text-muted)', opacity: 0.6, fontSize: '0.75rem' }}>
+                                The username you registered with
+                            </small>
                         </div>
                     )}
 
@@ -220,8 +244,10 @@ const LoginPage = () => {
                                     id="reset-email"
                                     type="email"
                                     value={email}
-                                    disabled
-                                    className="disabled-input"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@example.com"
+                                    required
+                                    autoComplete="email"
                                 />
                             </div>
                             <div className="form-group">

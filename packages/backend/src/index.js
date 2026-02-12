@@ -213,9 +213,32 @@ app.post('/api/telegram/webhook', async (c) => {
       })
     }
 
-    // Handle /start command
+    // Handle /start command — auto-link by Telegram username
     if (text === '/start') {
-      await reply('🐱 Welcome to Pusheen Wallet Bot!\n\nTo link your account, go to the app menu → "Link Telegram" and send the 6-digit code here.')
+      const senderUsername = message.from?.username
+
+      if (senderUsername) {
+        // Try to auto-link by matching registered Telegram username
+        const indexObj = await bucket.get(`telegram-index/${senderUsername.toLowerCase()}.json`)
+
+        if (indexObj) {
+          const { email } = await indexObj.json()
+          const userObj = await bucket.get(`users/${email}.json`)
+
+          if (userObj) {
+            const user = await userObj.json()
+            user.telegramChatId = chatId
+            user.telegramLinkedAt = new Date().toISOString()
+            await bucket.put(`users/${email}.json`, JSON.stringify(user))
+
+            await reply(`✅ Account linked successfully!\n\n🐱 Welcome, you're now connected to Pusheen Wallet.\n\nYou will receive password reset codes here.`)
+            return c.json({ ok: true })
+          }
+        }
+      }
+
+      // No matching account found
+      await reply('🐱 Welcome to Pusheen Wallet Bot!\n\nTo link your account:\n1. Register with your Telegram username in the app\n2. Come back here and send /start\n\nOr send a 6-digit code from the app menu → "Link Telegram".')
       return c.json({ ok: true })
     }
 

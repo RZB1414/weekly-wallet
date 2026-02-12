@@ -65,12 +65,12 @@ export const api = {
             }
         },
 
-        forgotPassword: async (email) => {
+        forgotPassword: async (telegramUsername) => {
             try {
                 const res = await fetch(`${API_URL}/auth/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, frontendUrl: window.location.origin }),
+                    body: JSON.stringify({ telegramUsername }),
                     mode: 'cors',
                 });
                 return await res.json();
