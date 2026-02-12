@@ -114,7 +114,7 @@ const App = () => {
 
     // Default categories for new months
     const defaultCategories = [
-        { name: 'Supermarket', budget: 0, type: 'credit' },
+        { name: 'Market', budget: 0, type: 'credit' },
         { name: 'Coffee', budget: 0, type: 'credit' },
         { name: 'Savings', budget: 0, type: 'credit' },
     ];

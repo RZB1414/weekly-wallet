@@ -28,7 +28,7 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
 
 
-    const [viewMode, setViewMode] = useState('LATEST'); // 'LATEST' | 'SUPERMARKET'
+    const [viewMode, setViewMode] = useState('LATEST'); // 'LATEST' | 'MARKET'
 
     const getStatus = () => {
         if (!week.startDate || !week.endDate) return 'UNKNOWN';
@@ -48,18 +48,18 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
     const status = getStatus();
 
-    // Supermarket Logic
-    const supermarketCategory = categories.find(c => c.name.toLowerCase() === 'supermarket' || c.name.toLowerCase() === 'mercado');
+    // Market Logic
+    const marketCategory = categories.find(c => c.name.toLowerCase() === 'market' || c.name.toLowerCase() === 'mercado');
     // Note: Category object from MonthlyPlanning uses 'budget', but we fallback to 0 safely
-    const monthlySupermarketBudget = supermarketCategory ? (supermarketCategory.budget || 0) : 0;
-    const weeklySupermarketBudget = monthlySupermarketBudget / 4;
+    const monthlyMarketBudget = marketCategory ? (marketCategory.budget || 0) : 0;
+    const weeklyMarketBudget = monthlyMarketBudget / 4;
 
-    // Calculate spent specific to supermarket
-    const supermarketExpenses = week.expenses.filter(e =>
-        e.category.toLowerCase() === 'supermarket' || e.category.toLowerCase() === 'mercado'
+    // Calculate spent specific to market
+    const marketExpenses = week.expenses.filter(e =>
+        e.category.toLowerCase() === 'market' || e.category.toLowerCase() === 'mercado'
     );
-    const supermarketSpent = supermarketExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const supermarketRemaining = weeklySupermarketBudget - supermarketSpent;
+    const marketSpent = marketExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const marketRemaining = weeklyMarketBudget - marketSpent;
 
     // Coffee Logic
     const coffeeCategory = categories.find(c => c.name.toLowerCase() === 'coffee' || c.name.toLowerCase() === 'café');
@@ -111,10 +111,10 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                             Latest
                         </button>
                         <button
-                            className={`view-tab ${viewMode === 'SUPERMARKET' ? 'active' : ''}`}
-                            onClick={() => setViewMode('SUPERMARKET')}
+                            className={`view-tab ${viewMode === 'MARKET' ? 'active' : ''}`}
+                            onClick={() => setViewMode('MARKET')}
                         >
-                            Supermarket
+                            Market
                         </button>
                         <button
                             className={`view-tab ${viewMode === 'COFFEE' ? 'active' : ''}`}
@@ -137,21 +137,21 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                     <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} />
                 )}
 
-                {viewMode === 'SUPERMARKET' && (
+                {viewMode === 'MARKET' && (
                     <div className="supermarket-view">
                         <div className="supermarket-summary">
                             <div className="summary-item">
                                 <span className="label">Weekly Budget</span>
-                                <span className="value">{formatCurrency(weeklySupermarketBudget)}</span>
+                                <span className="value">{formatCurrency(weeklyMarketBudget)}</span>
                             </div>
                             <div className="summary-item main">
                                 <span className="label">Remaining</span>
-                                <span className={`value ${supermarketRemaining < 0 ? 'negative' : 'positive'}`}>
-                                    {formatCurrency(supermarketRemaining)}
+                                <span className={`value ${marketRemaining < 0 ? 'negative' : 'positive'}`}>
+                                    {formatCurrency(marketRemaining)}
                                 </span>
                             </div>
                         </div>
-                        <ExpenseList expenses={supermarketExpenses} onDelete={handleDeleteExpense} />
+                        <ExpenseList expenses={marketExpenses} onDelete={handleDeleteExpense} />
                     </div>
                 )}
 

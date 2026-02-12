@@ -78,7 +78,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     };
 
     const defaultCategories = () => [
-        { id: crypto.randomUUID(), name: 'Supermarket', budget: 0, type: 'credit' },
+        { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit' },
         { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit' },
         { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit' },
     ];
@@ -116,7 +116,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setIsEditing(true);
         setView('DETAIL');
         setCategories([
-            { id: crypto.randomUUID(), name: 'Supermarket', budget: 0, type: 'credit' },
+            { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit' },
             { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit' },
             { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit' },
         ]);
