@@ -33,8 +33,8 @@ export function AuthProvider({ children }) {
         return result;
     };
 
-    const register = async (email, password) => {
-        const result = await api.auth.register(email, password);
+    const register = async (email, password, telegramUsername) => {
+        const result = await api.auth.register(email, password, telegramUsername);
         if (result.success) {
             localStorage.setItem('pw_token', result.token);
             localStorage.setItem('pw_user', JSON.stringify(result.user));

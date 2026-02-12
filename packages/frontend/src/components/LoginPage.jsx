@@ -9,6 +9,7 @@ const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [telegramUsername, setTelegramUsername] = useState('');
     const [resetCode, setResetCode] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -29,7 +30,7 @@ const LoginPage = () => {
                     setLoading(false);
                     return;
                 }
-                const result = await register(email, password);
+                const result = await register(email, password, telegramUsername || undefined);
                 if (result.error) {
                     setError(result.error);
                 }
@@ -154,19 +155,35 @@ const LoginPage = () => {
 
                     {/* Confirm Password — register only */}
                     {mode === 'register' && (
-                        <div className="form-group">
-                            <label htmlFor="confirmPassword">Confirm Password</label>
-                            <input
-                                id="confirmPassword"
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                                minLength={8}
-                                autoComplete="new-password"
-                            />
-                        </div>
+                        <>
+                            <div className="form-group">
+                                <label htmlFor="confirmPassword">Confirm Password</label>
+                                <input
+                                    id="confirmPassword"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    required
+                                    minLength={8}
+                                    autoComplete="new-password"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="telegramUsername">Telegram Username <span style={{ opacity: 0.5, fontWeight: 'normal' }}>(optional)</span></label>
+                                <input
+                                    id="telegramUsername"
+                                    type="text"
+                                    value={telegramUsername}
+                                    onChange={(e) => setTelegramUsername(e.target.value)}
+                                    placeholder="@your_username"
+                                    autoComplete="off"
+                                />
+                                <small style={{ color: 'var(--color-text-muted)', opacity: 0.6, fontSize: '0.75rem' }}>
+                                    Used for password recovery via @WeeklyWalletBot
+                                </small>
+                            </div>
+                        </>
                     )}
 
                     {/* 6-digit Code Input — verify-code mode */}
