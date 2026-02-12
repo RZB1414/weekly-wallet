@@ -94,6 +94,20 @@ export const api = {
                 return { error: 'Connection error. Please try again.' };
             }
         },
+
+        linkTelegram: async () => {
+            try {
+                const res = await fetch(`${API_URL}/auth/link-telegram`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    mode: 'cors',
+                });
+                return await res.json();
+            } catch (e) {
+                console.error('Link telegram failed:', e);
+                return { error: 'Connection error. Please try again.' };
+            }
+        },
     },
 
     // ── Data (Protected) ─────────────────────

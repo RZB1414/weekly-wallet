@@ -67,6 +67,29 @@ const App = () => {
         }
     };
 
+    // ── Telegram Linking ───────────────────────────
+    const [showTelegramLink, setShowTelegramLink] = useState(false);
+    const [telegramCode, setTelegramCode] = useState('');
+    const [telegramLoading, setTelegramLoading] = useState(false);
+
+    const handleLinkTelegram = async () => {
+        setTelegramLoading(true);
+        try {
+            const result = await api.auth.linkTelegram();
+            if (result.success) {
+                setTelegramCode(result.code);
+                setShowTelegramLink(true);
+            } else {
+                alert(result.error || 'Failed to generate code');
+            }
+        } catch (err) {
+            alert('Connection error');
+        } finally {
+            setTelegramLoading(false);
+            setShowUserMenu(false);
+        }
+    };
+
     // ── App State ─────────────────────────────────
     const [weeks, setWeeks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -305,6 +328,9 @@ const App = () => {
                         <button className="user-menu-item" onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}>
                             🔑 Change Password
                         </button>
+                        <button className="user-menu-item" onClick={handleLinkTelegram} disabled={telegramLoading}>
+                            {telegramLoading ? '⏳ Generating...' : '📱 Link Telegram'}
+                        </button>
                         <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
                             🚪 Logout
                         </button>
@@ -484,6 +510,43 @@ const App = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Telegram Link Modal */}
+            {showTelegramLink && (
+                <div className="change-pwd-overlay" onClick={(e) => {
+                    if (e.target === e.currentTarget) setShowTelegramLink(false);
+                }}>
+                    <div className="change-pwd-card" style={{ textAlign: 'center' }}>
+                        <h2>📱 Link Telegram</h2>
+                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>
+                            Send this code to <strong>@WeeklyWalletBot</strong> on Telegram:
+                        </p>
+                        <div style={{
+                            fontSize: '2rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '8px',
+                            padding: '20px',
+                            background: 'rgba(255, 140, 0, 0.15)',
+                            borderRadius: '16px',
+                            color: 'var(--color-primary)',
+                            marginBottom: '20px',
+                            fontFamily: 'monospace',
+                        }}>
+                            {telegramCode}
+                        </div>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', opacity: 0.7 }}>
+                            This code expires in 10 minutes.
+                        </p>
+                        <button
+                            className="btn-save"
+                            onClick={() => setShowTelegramLink(false)}
+                            style={{ marginTop: '15px', width: '100%' }}
+                        >
+                            Done
+                        </button>
                     </div>
                 </div>
             )}
