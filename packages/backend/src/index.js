@@ -181,4 +181,89 @@ app.get('/api/monthly-plannings', async (c) => {
   return c.json({ plans })
 })
 
+// ──────────────────────────────────────────────
+// POST /api/telegram/webhook
+// Receives messages from Telegram Bot for account linking
+// ──────────────────────────────────────────────
+app.post('/api/telegram/webhook', async (c) => {
+  const bucket = c.env.WEEKLY_WALLET_BUCKET
+  const botToken = c.env.TELEGRAM_BOT_TOKEN
+
+  if (!botToken) {
+    return c.json({ ok: false, error: 'Bot not configured' }, 500)
+  }
+
+  try {
+    const update = await c.req.json()
+    const message = update.message
+
+    if (!message || !message.text) {
+      return c.json({ ok: true })
+    }
+
+    const chatId = message.chat.id
+    const text = message.text.trim()
+
+    // Helper to reply via Telegram
+    const reply = async (replyText) => {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: replyText }),
+      })
+    }
+
+    // Handle /start command
+    if (text === '/start') {
+      await reply('🐱 Welcome to Pusheen Wallet Bot!\n\nTo link your account, go to the app menu → "Link Telegram" and send the 6-digit code here.')
+      return c.json({ ok: true })
+    }
+
+    // Check if the message is a 6-digit code
+    if (/^\d{6}$/.test(text)) {
+      const linkObj = await bucket.get(`telegram-links/${text}.json`)
+
+      if (!linkObj) {
+        await reply('❌ Invalid or expired code.\n\nGenerate a new one from the app menu → "Link Telegram".')
+        return c.json({ ok: true })
+      }
+
+      const linkData = await linkObj.json()
+
+      // Check expiry
+      if (Date.now() > linkData.expiry) {
+        await bucket.delete(`telegram-links/${text}.json`)
+        await reply('⏰ This code has expired.\n\nGenerate a new one from the app menu.')
+        return c.json({ ok: true })
+      }
+
+      // Link the Telegram chat to the user
+      const userObj = await bucket.get(`users/${linkData.email}.json`)
+      if (!userObj) {
+        await reply('❌ User not found. Please try again.')
+        return c.json({ ok: true })
+      }
+
+      const user = await userObj.json()
+      user.telegramChatId = chatId
+      user.telegramLinkedAt = new Date().toISOString()
+      await bucket.put(`users/${linkData.email}.json`, JSON.stringify(user))
+
+      // Clean up the linking code
+      await bucket.delete(`telegram-links/${text}.json`)
+
+      await reply('✅ Account linked successfully!\n\n🐱 You will now receive password reset codes here.')
+      return c.json({ ok: true })
+    }
+
+    // Unknown message
+    await reply('🐱 Send me a 6-digit code from the app to link your account.\n\nGo to app menu → "Link Telegram" to get a code.')
+    return c.json({ ok: true })
+
+  } catch (err) {
+    console.error('Telegram webhook error:', err)
+    return c.json({ ok: true }) // Always return 200 to Telegram
+  }
+})
+
 export default app

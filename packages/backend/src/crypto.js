@@ -197,3 +197,16 @@ export function generateResetToken() {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     return toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
+
+// ──────────────────────────────────────────────
+// Short Codes (6-digit numeric)
+// ──────────────────────────────────────────────
+
+/**
+ * Generate a 6-digit numeric code for Telegram linking & password reset.
+ */
+export function generateShortCode() {
+    const array = crypto.getRandomValues(new Uint8Array(4));
+    const num = ((array[0] << 24) | (array[1] << 16) | (array[2] << 8) | array[3]) >>> 0;
+    return String(num % 900000 + 100000); // Always 6 digits: 100000-999999
+}

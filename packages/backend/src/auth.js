@@ -5,12 +5,14 @@
  *   POST /api/auth/register       - Create new user
  *   POST /api/auth/login          - Login & get JWT
  *   POST /api/auth/change-password - Change password (re-wraps DEK)
- *   POST /api/auth/forgot-password - Send reset email
- *   POST /api/auth/reset-password  - Reset password via token
+ *   POST /api/auth/link-telegram   - Generate Telegram linking code
+ *   POST /api/auth/forgot-password - Send reset code via Telegram
+ *   POST /api/auth/reset-password  - Reset password via code
  */
 
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
+import { authMiddleware } from './middleware.js';
 import {
     hashPassword,
     verifyPassword,
@@ -18,7 +20,7 @@ import {
     generateDEK,
     wrapKey,
     unwrapKey,
-    generateResetToken,
+    generateShortCode,
 } from './crypto.js';
 
 const auth = new Hono();
@@ -73,7 +75,7 @@ function validatePassword(password) {
 
 auth.post('/register', async (c) => {
     const bucket = c.env.WEEKLY_WALLET_BUCKET;
-    const { email, password } = await c.req.json();
+    const { email, password, telegramUsername } = await c.req.json();
 
     // Validate
     if (!email || !password) {
@@ -112,6 +114,7 @@ auth.post('/register', async (c) => {
         passwordHash,
         passwordWrappedDEK,
         recoveryWrappedDEK,
+        telegramUsername: telegramUsername ? telegramUsername.replace(/^@/, '').trim() : null,
         createdAt: new Date().toISOString(),
     };
 
@@ -238,68 +241,84 @@ auth.post('/change-password', async (c) => {
 });
 
 // ──────────────────────────────────────────────
+// POST /api/auth/link-telegram (Protected)
+// Generates a 6-digit code for linking Telegram
+// ──────────────────────────────────────────────
+
+auth.post('/link-telegram', authMiddleware(), async (c) => {
+    const bucket = c.env.WEEKLY_WALLET_BUCKET;
+    const email = c.get('email');
+
+    if (!email) {
+        return c.json({ error: 'Authentication required' }, 401);
+    }
+
+    const code = generateShortCode();
+    const linkData = {
+        email: email.toLowerCase(),
+        expiry: Date.now() + (10 * 60 * 1000), // 10 minutes
+    };
+
+    await bucket.put(`telegram-links/${code}.json`, JSON.stringify(linkData));
+
+    return c.json({ success: true, code });
+});
+
+// ──────────────────────────────────────────────
 // POST /api/auth/forgot-password
 // ──────────────────────────────────────────────
 
 auth.post('/forgot-password', async (c) => {
     const bucket = c.env.WEEKLY_WALLET_BUCKET;
-    const { email, frontendUrl } = await c.req.json();
+    const { email } = await c.req.json();
+
+    const genericResponse = { success: true, message: 'If an account exists, a reset code has been sent.' };
 
     // Always return success to prevent email enumeration
     if (!email) {
-        return c.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+        return c.json(genericResponse);
     }
 
     const user = await getUser(bucket, email);
     if (!user) {
-        // Don't reveal that the user doesn't exist
-        return c.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+        return c.json(genericResponse);
     }
 
-    // Generate reset token with 1-hour expiry
-    const resetToken = generateResetToken();
-    user.resetToken = resetToken;
+    // Generate 6-digit reset code with 1-hour expiry
+    const resetCode = generateShortCode();
+    user.resetToken = resetCode;
     user.resetTokenExpiry = Date.now() + (60 * 60 * 1000); // 1 hour
     await putUser(bucket, email, user);
 
-    // Build reset URL
-    const baseUrl = frontendUrl || c.req.header('origin') || 'http://localhost:5173';
-    const resetUrl = `${baseUrl}?reset=true&token=${resetToken}&email=${encodeURIComponent(email.toLowerCase())}`;
-
-    // Send email via Resend
-    if (c.env.RESEND_API_KEY) {
+    // Send via Telegram
+    if (user.telegramChatId && c.env.TELEGRAM_BOT_TOKEN) {
         try {
-            await fetch('https://api.resend.com/emails', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${c.env.RESEND_API_KEY}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    from: c.env.RESEND_FROM_EMAIL || 'Pusheen Wallet <onboarding@resend.dev>',
-                    to: [email.toLowerCase()],
-                    subject: '🐱 Pusheen Wallet — Password Reset',
-                    html: `
-            <div style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px; background: #FFF9F0; border-radius: 24px;">
-              <h1 style="color: #4A2C00; font-family: 'Fredoka', sans-serif; text-align: center;">🐱 Pusheen Wallet</h1>
-              <p style="color: #4A2C00; font-size: 16px;">Hello!</p>
-              <p style="color: #8B5E3C; font-size: 14px;">We received a request to reset your password. Click the button below to create a new password:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" style="background: #FF8C00; color: white; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">
-                  Reset Password
-                </a>
-              </div>
-              <p style="color: #8B5E3C; font-size: 12px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-            </div>
-          `,
-                }),
-            });
+            const tgResponse = await fetch(
+                `https://api.telegram.org/bot${c.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: user.telegramChatId,
+                        text: `🐱 Pusheen Wallet\n\nYour password reset code:\n\n🔑 ${resetCode}\n\nThis code expires in 1 hour.\nIf you didn't request this, ignore this message.`,
+                    }),
+                }
+            );
+
+            if (tgResponse.ok) {
+                console.log('Reset code sent via Telegram to chat:', user.telegramChatId);
+            } else {
+                const errBody = await tgResponse.text();
+                console.error('Telegram API error:', errBody);
+            }
         } catch (err) {
-            console.error('Failed to send reset email:', err);
+            console.error('Failed to send Telegram message:', err);
         }
+    } else {
+        console.warn('User has no Telegram linked or TELEGRAM_BOT_TOKEN not configured.');
     }
 
-    return c.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+    return c.json(genericResponse);
 });
 
 // ──────────────────────────────────────────────
