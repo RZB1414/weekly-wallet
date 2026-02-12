@@ -213,8 +213,8 @@ app.post('/api/telegram/webhook', async (c) => {
       })
     }
 
-    // Handle /start command — auto-link by Telegram username
-    if (text === '/start') {
+    // Handle /start command (including deep links like /start)
+    if (text === '/start' || text.startsWith('/start ')) {
       const senderUsername = message.from?.username
 
       if (senderUsername) {

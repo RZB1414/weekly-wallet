@@ -33,6 +33,9 @@ const LoginPage = () => {
                 const result = await register(email, password, telegramUsername || undefined);
                 if (result.error) {
                     setError(result.error);
+                } else if (telegramUsername) {
+                    // Show Telegram link prompt
+                    setMode('link-telegram');
                 }
             } else if (mode === 'login') {
                 const result = await login(email, password);
@@ -98,6 +101,7 @@ const LoginPage = () => {
             case 'forgot': return 'Enter your Telegram username to receive a reset code.';
             case 'verify-code': return 'Enter the 6-digit code sent to your Telegram.';
             case 'reset': return 'Create a new password for your account.';
+            case 'link-telegram': return 'Link your Telegram to enable password recovery.';
             default: return '';
         }
     };
@@ -286,6 +290,7 @@ const LoginPage = () => {
                         type="submit"
                         className="login-btn"
                         disabled={loading || (mode === 'forgot' && !!success)}
+                        style={{ display: mode === 'link-telegram' ? 'none' : undefined }}
                     >
                         {loading ? (
                             <span className="btn-spinner">⏳</span>
@@ -294,6 +299,33 @@ const LoginPage = () => {
                         )}
                     </button>
                 </form>
+
+                {/* Telegram Link Prompt — after registration */}
+                {mode === 'link-telegram' && (
+                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📱</div>
+                        <p style={{ color: 'var(--color-text)', marginBottom: '16px', fontSize: '0.95rem' }}>
+                            Open the bot on Telegram and click <strong>START</strong> to link your account automatically.
+                        </p>
+                        <a
+                            href="https://t.me/WeeklyWalletBot?start=link"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="login-btn"
+                            style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginBottom: '12px' }}
+                        >
+                            📱 Open @WeeklyWalletBot
+                        </a>
+                        <button
+                            type="button"
+                            className="link-btn accent"
+                            onClick={() => window.location.reload()}
+                            style={{ marginTop: '8px' }}
+                        >
+                            ✅ Done, continue to app
+                        </button>
+                    </div>
+                )}
 
                 {/* Footer Links */}
                 <div className="login-footer">
