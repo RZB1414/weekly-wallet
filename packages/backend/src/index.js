@@ -216,16 +216,13 @@ app.post('/api/telegram/webhook', async (c) => {
     // Handle /start command (including deep links like /start link)
     if (text === '/start' || text.startsWith('/start ')) {
       const senderUsername = message.from?.username
-      console.log('[TG] /start chatId:', chatId, 'username:', senderUsername)
 
       if (senderUsername) {
         const indexKey = `telegram-index/${senderUsername.toLowerCase()}.json`
-        console.log('[TG] Looking for:', indexKey)
         const indexObj = await bucket.get(indexKey)
 
         if (indexObj) {
           const { email } = await indexObj.json()
-          console.log('[TG] Found index -> email:', email)
           const userObj = await bucket.get(`users/${email}.json`)
 
           if (userObj) {
@@ -233,18 +230,11 @@ app.post('/api/telegram/webhook', async (c) => {
             user.telegramChatId = chatId
             user.telegramLinkedAt = new Date().toISOString()
             await bucket.put(`users/${email}.json`, JSON.stringify(user))
-            console.log('[TG] ✅ Linked chatId', chatId, 'to', email)
 
             await reply(`✅ Account linked successfully!\n\n🐱 Welcome, you're now connected to Pusheen Wallet.\n\nYou will receive password reset codes here.`)
             return c.json({ ok: true })
-          } else {
-            console.log('[TG] ❌ User file not found for email:', email)
           }
-        } else {
-          console.log('[TG] ❌ No index file found for:', senderUsername.toLowerCase())
         }
-      } else {
-        console.log('[TG] ❌ No username in message.from')
       }
 
       // No matching account found

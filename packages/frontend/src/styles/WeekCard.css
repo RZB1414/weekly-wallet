@@ -207,6 +207,12 @@
     text-overflow: ellipsis;
     text-align: center;
     letter-spacing: 0.02em;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+    user-select: none;
+}
+.view-tab:focus {
+    outline: none;
 }
 
 .view-tab:hover {
