@@ -30,12 +30,19 @@ const LoginPage = () => {
                     setLoading(false);
                     return;
                 }
-                const result = await register(email, password, telegramUsername || undefined);
-                if (result.error) {
-                    setError(result.error);
-                } else if (telegramUsername) {
-                    // Show Telegram link prompt
-                    setMode('link-telegram');
+                if (telegramUsername) {
+                    // Register WITHOUT auto-login so we can show link-telegram screen
+                    const result = await api.auth.register(email, password, telegramUsername);
+                    if (result.error) {
+                        setError(result.error);
+                    } else {
+                        setMode('link-telegram');
+                    }
+                } else {
+                    const result = await register(email, password);
+                    if (result.error) {
+                        setError(result.error);
+                    }
                 }
             } else if (mode === 'login') {
                 const result = await login(email, password);
@@ -319,7 +326,9 @@ const LoginPage = () => {
                         <button
                             type="button"
                             className="link-btn accent"
-                            onClick={() => window.location.reload()}
+                            onClick={async () => {
+                                await login(email, password);
+                            }}
                             style={{ marginTop: '8px' }}
                         >
                             ✅ Done, continue to app
