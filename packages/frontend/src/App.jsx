@@ -9,6 +9,7 @@ import './styles/App.css';
 import './styles/LoginPage.css';
 
 import MonthlyPlanningModal from './components/MonthlyPlanningModal';
+import AddExpenseModal from './components/AddExpenseModal';
 
 const App = () => {
     const { user, loading: authLoading, logout, changePassword } = useAuth();
@@ -230,7 +231,10 @@ const App = () => {
             if (!week.expenses) return total;
             const weekSavings = week.expenses
                 .filter(e => e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança')
-                .reduce((sum, e) => sum + e.amount, 0);
+                .reduce((sum, e) => {
+                    // Credit = Deposit (Add), Expense = Withdrawal (Subtract)
+                    return e.type === 'credit' ? sum + e.amount : sum - e.amount;
+                }, 0);
             return total + weekSavings;
         }, 0);
 
@@ -277,6 +281,22 @@ const App = () => {
 
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
+    // ── Add Expense Modal State ──
+    const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+
+    const handleOpenAddExpense = () => {
+        setIsAddExpenseModalOpen(true);
+    };
+
+    const handleCloseAddExpense = () => {
+        setIsAddExpenseModalOpen(false);
+    };
+
+    const onAddExpense = (expense) => {
+        handleGlobalAddExpense(expense);
+        setIsAddExpenseModalOpen(false);
+    };
+
     // ── Render ────────────────────────────────────
 
     // Password Reset Page (from email link)
@@ -308,82 +328,130 @@ const App = () => {
         return <div className="loading-screen">LOADING YOUR DATA...</div>;
     }
 
+    const isAnyModalOpen = isMonthlyPlanningOpen || isAddExpenseModalOpen;
+
     return (
         <div className="app-container">
-            {/* Floating User Avatar */}
-            <div className="user-avatar-floating" onClick={() => setShowUserMenu(!showUserMenu)}>
-                🐱
-            </div>
+            {/* Background Content - Hidden when any modal is open */}
+            <div style={{ display: isAnyModalOpen ? 'none' : 'block' }}>
+                {/* Floating User Avatar */}
+                <div className="user-avatar-floating" onClick={() => setShowUserMenu(!showUserMenu)}>
+                    🐱
+                </div>
 
-            {/* User Menu Dropdown */}
-            {showUserMenu && (
-                <>
-                    <div className="user-menu-backdrop" onClick={() => setShowUserMenu(false)} />
-                    <div className="user-menu-dropdown">
-                        <div className="user-menu-header">
-                            <div className="user-menu-avatar">🐱</div>
-                            <div className="user-menu-email">{user.email}</div>
+                {/* User Menu Dropdown */}
+                {showUserMenu && (
+                    <>
+                        <div className="user-menu-backdrop" onClick={() => setShowUserMenu(false)} />
+                        <div className="user-menu-dropdown">
+                            <div className="user-menu-header">
+                                <div className="user-menu-avatar">🐱</div>
+                                <div className="user-menu-email">{user.email}</div>
+                            </div>
+                            <div className="user-menu-divider" />
+                            <button className="user-menu-item" onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}>
+                                🔑 Change Password
+                            </button>
+                            <button className="user-menu-item" onClick={handleLinkTelegram} disabled={telegramLoading}>
+                                {telegramLoading ? '⏳ Generating...' : '📱 Link Telegram'}
+                            </button>
+                            <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
+                                🚪 Logout
+                            </button>
                         </div>
-                        <div className="user-menu-divider" />
-                        <button className="user-menu-item" onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}>
-                            🔑 Change Password
-                        </button>
-                        <button className="user-menu-item" onClick={handleLinkTelegram} disabled={telegramLoading}>
-                            {telegramLoading ? '⏳ Generating...' : '📱 Link Telegram'}
-                        </button>
-                        <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
-                            🚪 Logout
-                        </button>
-                    </div>
-                </>
-            )}
+                    </>
+                )}
 
-            {/* Month/Year Selection Header */}
-            <div className="filter-header" style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '10px',
-                padding: '20px',
-                zIndex: 10,
-                position: 'relative'
-            }}>
-                <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                    className="glass-select"
+                {/* Month/Year Selection Header */}
+                <div className="filter-header" style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    padding: '20px',
+                    zIndex: 10,
+                    position: 'relative'
+                }}>
+                    <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        className="glass-select"
+                    >
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                            <option key={m} value={m}>{getMonthName(m)}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        className="glass-select"
+                    >
+                        {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <WeekCarousel
+                    weeks={displayedWeeks}
+                    categories={activeCategories}
+                    onUpdateWeek={(updatedWeek) => handleUpdateWeek(updatedWeek)}
+                    onGlobalAddExpense={handleGlobalAddExpense}
+                    onCreateWeek={handleCreateWeek}
+                    activeIndex={activeIndex}
+                    onIndexChange={setActiveIndex}
+                    totalSavings={totalSavings}
+                    onOpenAddExpense={handleOpenAddExpense}
+                />
+
+                <button
+                    className="monthly-planning-btn"
+                    onClick={() => setIsMonthlyPlanningOpen(true)}
                 >
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                        <option key={m} value={m}>{getMonthName(m)}</option>
-                    ))}
-                </select>
-                <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    className="glass-select"
-                >
-                    {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(y => (
-                        <option key={y} value={y}>{y}</option>
-                    ))}
-                </select>
+                    Monthly Planning
+                </button>
+
+                {/* Floating "Go to Current" Button */}
+                {(() => {
+                    const isCorrectMonth = selectedMonth === normalizedMonth && selectedYear === initialYear;
+                    const currentWeekIdx = isCorrectMonth ? findCurrentWeekIndex(displayedWeeks) : -1;
+                    const showButton = !isCorrectMonth || (isCorrectMonth && activeIndex !== currentWeekIdx);
+
+                    if (!showButton) return null;
+
+                    return (
+                        <button
+                            onClick={() => {
+                                if (!isCorrectMonth) {
+                                    setSelectedMonth(normalizedMonth);
+                                    setSelectedYear(initialYear);
+                                } else {
+                                    setActiveIndex(currentWeekIdx);
+                                }
+                            }}
+                            style={{
+                                position: 'fixed',
+                                bottom: '20px',
+                                right: '25px',
+                                zIndex: 100,
+                                padding: '12px 24px',
+                                borderRadius: '30px',
+                                border: 'none',
+                                background: 'var(--color-primary)',
+                                color: 'white',
+                                boxShadow: '0 4px 15px rgba(255, 140, 0, 0.4)',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '1rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            Current Week
+                        </button>
+                    );
+                })()}
             </div>
-
-            <WeekCarousel
-                weeks={displayedWeeks}
-                categories={activeCategories}
-                onUpdateWeek={(updatedWeek) => handleUpdateWeek(updatedWeek)}
-                onGlobalAddExpense={handleGlobalAddExpense}
-                onCreateWeek={handleCreateWeek}
-                activeIndex={activeIndex}
-                onIndexChange={setActiveIndex}
-                totalSavings={totalSavings}
-            />
-
-            <button
-                className="monthly-planning-btn"
-                onClick={() => setIsMonthlyPlanningOpen(true)}
-            >
-                Monthly Planning
-            </button>
 
             <MonthlyPlanningModal
                 isOpen={isMonthlyPlanningOpen}
@@ -397,47 +465,13 @@ const App = () => {
                 }}
             />
 
-            {/* Floating "Go to Current" Button */}
-            {(() => {
-                const isCorrectMonth = selectedMonth === normalizedMonth && selectedYear === initialYear;
-                const currentWeekIdx = isCorrectMonth ? findCurrentWeekIndex(displayedWeeks) : -1;
-                const showButton = !isCorrectMonth || (isCorrectMonth && activeIndex !== currentWeekIdx);
-
-                if (!showButton) return null;
-
-                return (
-                    <button
-                        onClick={() => {
-                            if (!isCorrectMonth) {
-                                setSelectedMonth(normalizedMonth);
-                                setSelectedYear(initialYear);
-                            } else {
-                                setActiveIndex(currentWeekIdx);
-                            }
-                        }}
-                        style={{
-                            position: 'fixed',
-                            bottom: '20px',
-                            right: '25px',
-                            zIndex: 100,
-                            padding: '12px 24px',
-                            borderRadius: '30px',
-                            border: 'none',
-                            background: 'var(--color-primary)',
-                            color: 'white',
-                            boxShadow: '0 4px 15px rgba(255, 140, 0, 0.4)',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            fontSize: '1rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        Current Week
-                    </button>
-                );
-            })()}
+            {/* Global Add Expense Modal */}
+            <AddExpenseModal
+                isOpen={isAddExpenseModalOpen}
+                onClose={handleCloseAddExpense}
+                onAdd={onAddExpense}
+                categories={activeCategories.map(c => c.name)}
+            />
 
             {/* Change Password Modal */}
             {showChangePwd && (

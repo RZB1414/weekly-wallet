@@ -58,7 +58,7 @@ const swipePower = (offset, velocity) => {
     return Math.abs(offset) * velocity;
 };
 
-const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense, totalSavings }) => {
+const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense, totalSavings, onOpenAddExpense }) => {
     // We rely on parent for index management now.
     // Internal direction state is fine to keep here for animations
     const [direction, setDirection] = useState(0);
@@ -83,7 +83,10 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
             if (!week.expenses) return total;
             const weekSavings = week.expenses
                 .filter(e => e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança')
-                .reduce((sum, e) => sum + e.amount, 0);
+                .reduce((sum, e) => {
+                    // Credit = Deposit (Add), Expense = Withdrawal (Subtract)
+                    return e.type === 'credit' ? sum + e.amount : sum - e.amount;
+                }, 0);
             return total + weekSavings;
         }, 0);
     }, [weeks]);
@@ -170,6 +173,7 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
                                 totalWeeks={weeks.length}
                                 totalSavings={totalSavings}
                                 currentMonthSavings={currentMonthSavings}
+                                onOpenAddExpense={onOpenAddExpense}
                             />
                         )}
                     </motion.div>

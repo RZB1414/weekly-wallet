@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../styles/MonthlyPlanning.css';
 import { api } from '../lib/api';
+import { getFinancialInfo } from '../lib/utils';
 
 const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPlanSave }) => {
     // View State: 'LIST' | 'DETAIL'
@@ -54,9 +55,11 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             if (week.expenses) {
                 week.expenses.forEach(exp => {
                     if (!exp.date) return;
-                    const expDate = new Date(exp.date);
-                    // Match Year and Month (selectedMonth is 1-12, getMonth is 0-11)
-                    if (expDate.getFullYear() === selectedYear && (expDate.getMonth() + 1) === selectedMonth) {
+
+                    // Use Financial Month logic to match the rest of the app
+                    const { month, year } = getFinancialInfo(exp.date);
+
+                    if (year === selectedYear && month === selectedMonth) {
                         relevantExpenses.push(exp);
                     }
                 });

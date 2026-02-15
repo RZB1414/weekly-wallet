@@ -2,22 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import ExpenseList from './ExpenseList';
-import AddExpenseModal from './AddExpenseModal';
 import { formatCurrency, calculateRemaining, getWeekRange, formatDate } from '../lib/utils';
 import '../styles/WeekCard.css';
 
-const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    const handleAddExpense = (expense) => {
-        if (onGlobalAddExpense) {
-            onGlobalAddExpense(expense);
-        } else {
-            // Fallback for isolated testing or legacy
-            const updatedExpenses = [expense, ...week.expenses];
-            onUpdateWeek({ ...week, expenses: updatedExpenses });
-        }
-    };
+const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings, onOpenAddExpense }) => {
 
     const handleDeleteExpense = (id) => {
         if (window.confirm("Are you sure you want to delete this expense?")) {
@@ -25,8 +13,6 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
             onUpdateWeek({ ...week, expenses: updatedExpenses });
         }
     };
-
-
 
     const [viewMode, setViewMode] = useState('LATEST'); // 'LATEST' | 'MARKET'
 
@@ -194,19 +180,12 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
             <motion.button
                 className="add-expense-btn"
-                onClick={() => setIsModalOpen(true)}
+                onClick={onOpenAddExpense}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
             >
                 <Plus size={32} />
             </motion.button>
-
-            <AddExpenseModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onAdd={handleAddExpense}
-                categories={categories.map(c => c.name)} // Pass strings to modal
-            />
         </div>
     );
 };
