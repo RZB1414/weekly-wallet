@@ -28,6 +28,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     const [editingCategoryId, setEditingCategoryId] = useState(null);
     const [editCategoryName, setEditCategoryName] = useState('');
     const [editCategoryBudget, setEditCategoryBudget] = useState('');
+    const [editCategoryType, setEditCategoryType] = useState('credit');
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -233,6 +234,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setEditingCategoryId(cat.id);
         setEditCategoryName(cat.name);
         setEditCategoryBudget(cat.budget.toString());
+        setEditCategoryType(cat.type || 'credit');
     };
 
     const handleSaveEditCategory = (id) => {
@@ -242,7 +244,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                 return {
                     ...c,
                     name: editCategoryName.trim() || c.name,
-                    budget: !isNaN(budgetVal) ? budgetVal : c.budget
+                    budget: !isNaN(budgetVal) ? budgetVal : c.budget,
+                    type: editCategoryType
                 };
             }
             return c;
@@ -406,6 +409,20 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                         >
                                             {editingCategoryId === cat.id ? (
                                                 <div className="cat-edit-form" onClick={e => e.stopPropagation()}>
+                                                    <div className="transaction-type-toggle" style={{ marginBottom: '10px' }}>
+                                                        <button
+                                                            className={`type-btn ${editCategoryType === 'credit' ? 'active credit' : ''}`}
+                                                            onClick={() => setEditCategoryType('credit')}
+                                                        >
+                                                            Credit
+                                                        </button>
+                                                        <button
+                                                            className={`type-btn ${editCategoryType === 'spend' ? 'active expense' : ''}`}
+                                                            onClick={() => setEditCategoryType('spend')}
+                                                        >
+                                                            Spend
+                                                        </button>
+                                                    </div>
                                                     <input
                                                         type="text"
                                                         value={editCategoryName}
