@@ -187,28 +187,52 @@ const App = () => {
         }
     };
 
-    const handleGlobalAddExpense = (expense) => {
-        const { quarter } = getFinancialInfo(expense.date);
-        const targetWeekId = quarter.id;
-        const existingWeek = weeks.find(w => w.id === targetWeekId);
+    const handleGlobalAddExpense = (expenseOrExpenses) => {
+        const expensesToAdd = Array.isArray(expenseOrExpenses) ? expenseOrExpenses : [expenseOrExpenses];
 
-        let targetWeek;
-        if (existingWeek) {
-            targetWeek = { ...existingWeek };
-        } else {
-            targetWeek = {
-                id: targetWeekId,
-                startDate: quarter.start,
-                endDate: quarter.end,
-                initialBalance: 0,
-                expenses: [],
-                isQuarter: true
-            };
-        }
+        // Group expenses by target week ID to minimize state updates
+        const expensesByWeek = {};
 
-        const updatedExpenses = [expense, ...targetWeek.expenses];
-        const updatedWeek = { ...targetWeek, expenses: updatedExpenses };
-        handleUpdateWeek(updatedWeek);
+        expensesToAdd.forEach(expense => {
+            const { quarter } = getFinancialInfo(expense.date);
+            const targetWeekId = quarter.id;
+
+            if (!expensesByWeek[targetWeekId]) {
+                expensesByWeek[targetWeekId] = {
+                    quarter,
+                    expenses: []
+                };
+            }
+            expensesByWeek[targetWeekId].expenses.push(expense);
+        });
+
+        // Update weeks state
+        setWeeks(prevWeeks => {
+            const newWeeks = [...prevWeeks];
+
+            Object.entries(expensesByWeek).forEach(([weekId, data]) => {
+                const existingIndex = newWeeks.findIndex(w => w.id === weekId);
+
+                if (existingIndex !== -1) {
+                    const existingWeek = newWeeks[existingIndex];
+                    newWeeks[existingIndex] = {
+                        ...existingWeek,
+                        expenses: [...data.expenses, ...existingWeek.expenses]
+                    };
+                } else {
+                    newWeeks.push({
+                        id: weekId,
+                        startDate: data.quarter.start,
+                        endDate: data.quarter.end,
+                        initialBalance: 0,
+                        expenses: data.expenses,
+                        isQuarter: true
+                    });
+                }
+            });
+
+            return newWeeks;
+        });
     };
 
     const handleCreateWeek = () => {
