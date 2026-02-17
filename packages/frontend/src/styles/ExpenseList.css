@@ -42,9 +42,9 @@
     font-size: 1rem;
     color: var(--color-text-primary);
     margin-bottom: 0.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    /* Allow wrapping */
+    line-height: 1.2;
 }
 
 .expense-date {
