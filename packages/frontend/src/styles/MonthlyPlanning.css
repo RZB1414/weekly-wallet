@@ -4,31 +4,23 @@
     left: 0;
     width: 100vw;
     height: 100dvh;
-    background: rgba(0, 0, 0, 0.3);
-    /* Lighter overlay */
+    background: var(--color-bg);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    backdrop-filter: blur(8px);
 }
 
 .monthly-planning-modal {
     background: var(--color-bg);
-    border: 4px solid white;
-    border-radius: 24px;
-    width: 90%;
-    max-width: 500px;
-    width: 100%;
-    /* Fallback */
-    max-width: 95vw;
-    /* Ensure it fits on mobile */
-    /* Adjust as needed */
-    height: 85vh;
-    /* Fixed height for scrollable content */
+    border: none;
+    border-radius: 0;
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
     color: var(--color-text-primary);
     font-family: var(--font-body);
 }
@@ -49,7 +41,7 @@
     justify-content: space-between;
     align-items: center;
     background: white;
-    border-radius: 20px 20px 0 0;
+    border-radius: 0;
 }
 
 .modal-header h2 {
@@ -264,8 +256,7 @@
     padding: 1.5rem;
     border-top: 2px dashed var(--color-soft-gray);
     background: #FAFAFA;
-    /* Very light gray */
-    border-radius: 0 0 20px 20px;
+    border-radius: 0;
 }
 
 .summary-row {

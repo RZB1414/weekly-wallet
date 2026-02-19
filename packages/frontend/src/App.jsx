@@ -11,12 +11,16 @@ import './styles/LoginPage.css';
 import MonthlyPlanningModal from './components/MonthlyPlanningModal';
 import AddExpenseModal from './components/AddExpenseModal';
 import Dashboard from './components/Dashboard';
+import UserGuide from './components/UserGuide';
 
 const App = () => {
     const { user, loading: authLoading, logout, changePassword } = useAuth();
 
     // ── User Menu Dropdown ────────────────────────
     const [showUserMenu, setShowUserMenu] = useState(false);
+
+    // ── User Guide ────────────────────────────────
+    const [showUserGuide, setShowUserGuide] = useState(false);
 
     // ── Password Reset via URL ────────────────────
     const [resetMode, setResetMode] = useState(false);
@@ -337,6 +341,10 @@ const App = () => {
     useEffect(() => {
         const handlePopState = (e) => {
             // Close modals first, then navigate views
+            if (showUserGuide) {
+                setShowUserGuide(false);
+                return;
+            }
             if (showTelegramLink) {
                 setShowTelegramLink(false);
                 return;
@@ -366,7 +374,7 @@ const App = () => {
 
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, [currentView, isAddExpenseModalOpen, isMonthlyPlanningOpen, showChangePwd, showTelegramLink, showUserMenu]);
+    }, [currentView, isAddExpenseModalOpen, isMonthlyPlanningOpen, showChangePwd, showTelegramLink, showUserMenu, showUserGuide]);
 
     const handleOpenAddExpense = () => {
         setIsAddExpenseModalOpen(true);
@@ -431,6 +439,9 @@ const App = () => {
                         </button>
                         <button className="user-menu-item" onClick={handleLinkTelegram} disabled={telegramLoading}>
                             {telegramLoading ? '⏳ Generating...' : '📱 Link Telegram'}
+                        </button>
+                        <button className="user-menu-item" onClick={() => { setShowUserGuide(true); setShowUserMenu(false); }}>
+                            ❓ Help
                         </button>
                         <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
                             🚪 Logout
@@ -667,6 +678,9 @@ const App = () => {
                     </div>
                 </div>
             )}
+
+            {/* User Guide */}
+            <UserGuide isOpen={showUserGuide} onClose={() => setShowUserGuide(false)} />
 
             {/* Telegram Link Modal */}
             {showTelegramLink && (

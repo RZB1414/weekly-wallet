@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Wallet — User Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f5f0;
+            color: #1f2937;
+            line-height: 1.6;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* ── Page sections ── */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 40px 50px;
+            background: white;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        /* ── Cover ── */
+        .cover {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 297mm;
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFFBEB 50%, #FEF3C7 100%);
+        }
+
+        .cover-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #F59E0B, #FB923C);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            margin-bottom: 30px;
+            box-shadow: 0 12px 40px rgba(245, 158, 11, 0.3);
+        }
+
+        .cover h1 {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #F59E0B, #EA580C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+
+        .cover .subtitle {
+            font-size: 20px;
+            color: #92400E;
+            font-weight: 600;
+            margin-bottom: 40px;
+        }
+
+        .cover .tagline {
+            font-size: 14px;
+            color: #B45309;
+            max-width: 400px;
+            line-height: 1.7;
+        }
+
+        .cover-footer {
+            position: absolute;
+            bottom: 40px;
+            font-size: 12px;
+            color: #D97706;
+        }
+
+        /* ── Section headers ── */
+        .section-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #F59E0B, #FB923C);
+            color: white;
+            border-radius: 50%;
+            font-weight: 800;
+            font-size: 16px;
+            margin-right: 14px;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            font-size: 26px;
+            font-weight: 800;
+            color: #92400E;
+            margin-bottom: 8px;
+        }
+
+        .section-desc {
+            font-size: 14px;
+            color: #78716C;
+            margin-bottom: 28px;
+            margin-left: 50px;
+        }
+
+        /* ── Phone mockup ── */
+        .phone-frame {
+            width: 260px;
+            min-height: 460px;
+            background: #1f1f1f;
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+        }
+
+        .phone-screen {
+            width: 100%;
+            min-height: 436px;
+            background: #FFFBEB;
+            border-radius: 26px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .phone-notch {
+            width: 100px;
+            height: 22px;
+            background: #1f1f1f;
+            border-radius: 0 0 14px 14px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── Layout helpers ── */
+        .step-row {
+            display: flex;
+            gap: 36px;
+            align-items: flex-start;
+            margin-bottom: 40px;
+        }
+
+        .step-row.reverse {
+            flex-direction: row-reverse;
+        }
+
+        .step-content {
+            flex: 1;
+            padding-top: 20px;
+        }
+
+        .step-content h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 10px;
+        }
+
+        .step-content p {
+            font-size: 13px;
+            color: #6B7280;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+
+        /* ── Tip boxes ── */
+        .tip-box {
+            background: #FFF7ED;
+            border-left: 4px solid #F59E0B;
+            border-radius: 0 12px 12px 0;
+            padding: 14px 18px;
+            margin-top: 14px;
+        }
+
+        .tip-box strong {
+            color: #B45309;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tip-box p {
+            font-size: 12px;
+            color: #92400E;
+            margin-top: 4px;
+        }
+
+        /* ── Mini screen content styles ── */
+        .screen-header {
+            background: linear-gradient(180deg, #FFF7ED, #FFFBEB);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .screen-header h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .screen-body {
+            padding: 12px 16px;
+        }
+
+        .mini-input {
+            width: 100%;
+            height: 32px;
+            background: white;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 10px;
+            color: #9CA3AF;
+        }
+
+        .mini-btn {
+            width: 100%;
+            height: 34px;
+            background: linear-gradient(135deg, #F59E0B, #FB923C);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .kpi-mini {
+            background: white;
+            border-radius: 14px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+            margin-bottom: 10px;
+        }
+
+        .kpi-mini .label {
+            font-size: 9px;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-mini .value {
+            font-size: 20px;
+            font-weight: 800;
+            color: #059669;
+        }
+
+        .kpi-mini .sub {
+            font-size: 9px;
+            color: #9CA3AF;
+        }
+
+        .mini-bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 80px;
+            padding: 0 10px;
+            margin-bottom: 8px;
+        }
+
+        .mini-bar {
+            width: 30px;
+            border-radius: 6px 6px 0 0;
+            position: relative;
+        }
+
+        .mini-bar span {
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: #6B7280;
+        }
+
+        .chart-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-green {
+            font-size: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .expense-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #F3F4F6;
+            font-size: 10px;
+        }
+
+        .expense-row .cat {
+            color: #6B7280;
+        }
+
+        .expense-row .amt {
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .mini-fab {
+            background: linear-gradient(135deg, #F59E0B, #FB923C);
+            color: white;
+            font-weight: 700;
+            font-size: 11px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 14px;
+            margin-top: 10px;
+        }
+
+        .week-indicator {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin: 8px 0;
+        }
+
+        .week-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #E5E7EB;
+        }
+
+        .week-dot.active {
+            background: #F59E0B;
+        }
+
+        /* ── Features list ── */
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            background: #FFF7ED;
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .feature-card .emoji {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .feature-card h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #92400E;
+            margin-bottom: 4px;
+        }
+
+        .feature-card p {
+            font-size: 11px;
+            color: #B45309;
+            line-height: 1.5;
+        }
+
+        /* ── Steps list ── */
+        .steps-list {
+            margin-left: 50px;
+            list-style: none;
+        }
+
+        .steps-list li {
+            position: relative;
+            padding-left: 28px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: #4B5563;
+        }
+
+        .steps-list li::before {
+            content: attr(data-step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            background: #FEF3C7;
+            color: #B45309;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 26px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            min-height: 100%;
+            padding-bottom: 0;
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 16px;
+            width: 100%;
+        }
+
+        .modal-card h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .cat-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .cat-badge {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 600;
+            background: #FEF3C7;
+            color: #B45309;
+        }
+
+        .cat-badge.active {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .toggle-group {
+            display: flex;
+            background: #F3F4F6;
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 10px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            text-align: center;
+            padding: 5px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #9CA3AF;
+        }
+
+        .toggle-btn.active {
+            background: white;
+            color: #F59E0B;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .planning-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .planning-row .name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1F2937;
+        }
+
+        .planning-row .budget {
+            font-size: 11px;
+            color: #059669;
+            font-weight: 700;
+        }
+
+        .planning-row .type-badge {
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .type-spend {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+
+        .type-credit {
+            background: #DCFCE7;
+            color: #16A34A;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #374151;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .menu-item.logout {
+            color: #DC2626;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ═══════════ PAGE 1 — COVER ═══════════ -->
+    <div class="page cover">
+        <div class="cover-avatar">🐱</div>
+        <h1>Weekly Wallet</h1>
+        <p class="subtitle">User Guide</p>
+        <p class="tagline">
+            Learn how to track your weekly expenses, plan your monthly budget,
+            and stay on top of your finances — all from your phone.
+        </p>
+        <p class="cover-footer">v1.0 — February 2026</p>
+    </div>
+
+    <!-- ═══════════ PAGE 2 — LOGIN & REGISTER ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">1</span>
+            Getting Started
+        </div>
+        <p class="section-desc">Create your account and log in to start tracking your finances.</p>
+
+        <div class="step-row">
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <div class="phone-notch"></div>
+                    <div class="screen-body" style="padding-top: 40px; text-align: center;">
+                        <div style="font-size: 40px; margin-bottom: 8px;">🐱</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #F59E0B; margin-bottom: 4px;">Weekly
+                            Wallet</div>
+                        <div style="font-size: 9px; color: #9CA3AF; margin-bottom: 20px;">Your personal finance
+                            companion</div>
+
+                        <div style="padding: 0 16px;">
+                            <div class="mini-input">📧 Email</div>
+                            <div class="mini-input">🔒 Password</div>
+                            <div class="mini-input">📱 Telegram Username (optional)</div>
+                            <div class="mini-btn">Create Account</div>
+                            <div style="margin-top: 12px; font-size: 9px; color: #9CA3AF;">
+                                Already have an account? <span style="color: #F59E0B; font-weight: 600;">Login</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <h3>1. Create Your Account</h3>
+                <p>Open the app and tap <strong>"Create Account"</strong>. You'll need:</p>
+                <ul class="steps-list" style="margin-left: 0; margin-top: 10px;">
+                    <li data-step="a">Your <strong>email address</strong> — used for login</li>
+                    <li data-step="b">A strong <strong>password</strong> (min. 8 characters)</li>
+                    <li data-step="c">Your <strong>Telegram username</strong> (optional) — enables password recovery via
+                        Telegram Bot</li>
+                </ul>
+
+                <div class="tip-box">
+                    <strong>💡 Tip</strong>
+                    <p>Adding your Telegram username during registration lets you reset your password through
+                        <strong>@WeeklyWalletBot</strong> on Telegram — no email needed!</p>
+                </div>
+
+                <h3 style="margin-top: 24px;">2. Log In</h3>
+                <p>After registration, switch to the <strong>Login</strong> tab, enter your email and password, and tap
+                    <strong>Login</strong>. Your data is encrypted end-to-end, only you can see it.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE 3 — DASHBOARD ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">2</span>
+            Dashboard
+        </div>
+        <p class="section-desc">Your financial overview at a glance — KPIs, charts, and quick actions.</p>
+
+        <div class="step-row">
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <div class="phone-notch"></div>
+                    <div class="screen-header">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700;">Hi, Renan! 👋</div>
+                            <div style="font-size: 9px; color: #6B7280;">Financial Health Check 🩺</div>
+                        </div>
+                        <div
+                            style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #F59E0B, #FB923C); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                            🐱</div>
+                    </div>
+                    <div class="screen-body">
+                        <div class="kpi-mini">
+                            <div class="label">Weekly Balance</div>
+                            <div class="value">AED 342</div>
+                            <div class="sub">Left to spend</div>
+                        </div>
+                        <div class="chart-title">Weekly Goals <span class="badge-green">Feb — 68% left</span></div>
+                        <div class="mini-bar-chart">
+                            <div class="mini-bar" style="height: 55px; background: #34D399;"><span>W1</span></div>
+                            <div class="mini-bar" style="height: 70px; background: #FBBF24;"><span>W2</span></div>
+                            <div class="mini-bar" style="height: 35px; background: #34D399;"><span>W3</span></div>
+                            <div class="mini-bar" style="height: 15px; background: #E5E7EB;"><span>W4</span></div>
+                        </div>
+                        <div class="mini-fab">➕ Add Expense</div>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <div
+                                style="flex: 1; text-align: center; padding: 6px; background: white; border-radius: 10px; font-size: 10px; font-weight: 600; color: #6B7280; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                                📅 Plan</div>
+                            <div
+                                style="flex: 1; text-align: center; padding: 6px; background: white; border-radius: 10px; font-size: 10px; font-weight: 600; color: #6B7280; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                                📊 History</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <h3>Your Home Screen</h3>
+                <p>The Dashboard shows everything you need at a glance:</p>
+
+                <div class="features-grid" style="grid-template-columns: 1fr; gap: 10px; margin-top: 14px;">
+                    <div class="feature-card" style="padding: 12px 16px;">
+                        <h4>💰 Weekly Balance</h4>
+                        <p>Shows how much of your weekly budget you have left. Green = on track, red = over budget.</p>
+                    </div>
+                    <div class="feature-card" style="padding: 12px 16px;">
+                        <h4>📊 Weekly Goals Chart</h4>
+                        <p>Bar chart comparing your actual spending vs budget for each week of the month. The badge
+                            shows the monthly budget remaining %.</p>
+                    </div>
+                    <div class="feature-card" style="padding: 12px 16px;">
+                        <h4>📈 Trend Chart</h4>
+                        <p>Cumulative spending vs ideal budget line. Toggle between <strong>weekly</strong> and
+                            <strong>monthly</strong> views.</p>
+                    </div>
+                    <div class="feature-card" style="padding: 12px 16px;">
+                        <h4>🍩 Categories Donut</h4>
+                        <p>See where your money goes — top 5 spending categories in a donut chart with percentage
+                            breakdown.</p>
+                    </div>
+                </div>
+
+                <div class="tip-box" style="margin-top: 14px;">
+                    <strong>💡 Tip</strong>
+                    <p>Tap the <strong>cat avatar</strong> (top right) to access the user menu: change password, link
+                        Telegram, or logout.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE 4 — ADD EXPENSE ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">3</span>
+            Adding Expenses
+        </div>
+        <p class="section-desc">Quick and easy — add expenses from anywhere in the app.</p>
+
+        <div class="step-row reverse">
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <div class="phone-notch"></div>
+                    <div class="modal-overlay">
+                        <div class="modal-card">
+                            <h4>➕ Add Expense</h4>
+                            <div class="toggle-group">
+                                <div class="toggle-btn">💸 Expense</div>
+                                <div class="toggle-btn active">💳 Credit</div>
+                            </div>
+                            <div class="mini-input">Description...</div>
+                            <div class="mini-input">💲 Amount</div>
+                            <div style="font-size: 9px; color: #6B7280; margin-bottom: 6px; font-weight: 600;">Category
+                            </div>
+                            <div class="cat-badges">
+                                <div class="cat-badge active">🛒 Market</div>
+                                <div class="cat-badge">☕ Coffee</div>
+                                <div class="cat-badge">💰 Savings</div>
+                                <div class="cat-badge">🍕 Food</div>
+                            </div>
+                            <div style="font-size: 9px; color: #6B7280; margin-bottom: 6px; font-weight: 600;">Date
+                            </div>
+                            <div class="mini-input">📅 2026-02-19</div>
+                            <div style="font-size: 9px; color: #6B7280; margin-bottom: 6px; font-weight: 600;">Split
+                                into installments</div>
+                            <div class="mini-input">1x (no split)</div>
+                            <div class="mini-btn" style="margin-top: 8px;">Add</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <h3>How to Add an Expense</h3>
+                <p>Tap the <strong>"➕ Add Expense"</strong> button on the Dashboard or in the Week History view.</p>
+
+                <ul class="steps-list" style="margin-left: 0; margin-top: 14px;">
+                    <li data-step="1">Choose <strong>Expense</strong> (money going out) or <strong>Credit</strong>
+                        (money coming in)</li>
+                    <li data-step="2">Enter a <strong>description</strong> (e.g., "Grocery run")</li>
+                    <li data-step="3">Enter the <strong>amount</strong></li>
+                    <li data-step="4">Select a <strong>category</strong> from your Monthly Planning</li>
+                    <li data-step="5">Pick the <strong>date</strong> — the expense auto-assigns to the correct week</li>
+                    <li data-step="6">Optionally <strong>split into installments</strong> across multiple weeks</li>
+                    <li data-step="7">Tap <strong>Add</strong> — done!</li>
+                </ul>
+
+                <div class="tip-box">
+                    <strong>💡 Splitting Expenses</strong>
+                    <p>Bought something expensive? Split it across 2, 3, or 4 weeks. The app will automatically create
+                        an entry for each week (e.g., "Laptop (1/3)", "Laptop (2/3)", "Laptop (3/3)").</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE 5 — WEEK HISTORY ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">4</span>
+            Week History
+        </div>
+        <p class="section-desc">Swipe through your weekly expense cards to review your spending.</p>
+
+        <div class="step-row">
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <div class="phone-notch"></div>
+                    <div style="padding: 8px 16px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div
+                                style="background: white; padding: 5px 12px; border-radius: 14px; font-size: 10px; font-weight: 700; color: #F59E0B; box-shadow: 0 1px 4px rgba(0,0,0,0.08);">
+                                🏠 Home</div>
+                            <div style="display: flex; gap: 6px;">
+                                <div
+                                    style="background: white; padding: 5px 10px; border-radius: 8px; font-size: 10px; color: #374151; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                                    February</div>
+                                <div
+                                    style="background: white; padding: 5px 10px; border-radius: 8px; font-size: 10px; color: #374151; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                                    2026</div>
+                            </div>
+                        </div>
+
+                        <div
+                            style="background: white; border-radius: 20px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 8px;">
+                            <div
+                                style="text-align: center; font-size: 13px; font-weight: 700; color: #1F2937; margin-bottom: 4px;">
+                                Week 2</div>
+                            <div style="text-align: center; font-size: 9px; color: #9CA3AF; margin-bottom: 12px;">Feb 3
+                                – Feb 9</div>
+
+                            <div class="expense-row"><span class="cat">🛒 Market</span><span class="amt">- AED 85</span>
+                            </div>
+                            <div class="expense-row"><span class="cat">☕ Coffee</span><span class="amt">- AED 22</span>
+                            </div>
+                            <div class="expense-row"><span class="cat">🍕 Dinner</span><span class="amt">- AED 65</span>
+                            </div>
+                            <div class="expense-row"><span class="cat">💳 Refund</span><span class="amt"
+                                    style="color: #059669;">+ AED 30</span></div>
+                            <div class="expense-row" style="border: none;"><span class="cat">🚗 Transport</span><span
+                                    class="amt">- AED 40</span></div>
+
+                            <div
+                                style="margin-top: 12px; padding-top: 10px; border-top: 2px solid #F3F4F6; text-align: center;">
+                                <div style="font-size: 9px; color: #9CA3AF;">Remaining</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #059669;">AED 160</div>
+                            </div>
+                        </div>
+
+                        <div class="week-indicator">
+                            <div class="week-dot"></div>
+                            <div class="week-dot active"></div>
+                            <div class="week-dot"></div>
+                            <div class="week-dot"></div>
+                        </div>
+
+                        <div style="text-align: center; margin-top: 8px;">
+                            <div
+                                style="display: inline-block; background: white; padding: 8px 20px; border-radius: 14px; font-size: 11px; font-weight: 600; color: #6B7280; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                📅 Monthly Planning</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <h3>Viewing Your Week Cards</h3>
+                <p>Tap <strong>"📊 History"</strong> on the Dashboard to see all your weekly expense cards:</p>
+
+                <ul class="steps-list" style="margin-left: 0; margin-top: 14px;">
+                    <li data-step="→">Use the <strong>month/year selectors</strong> at the top to navigate between
+                        months</li>
+                    <li data-step="→"><strong>Swipe left/right</strong> between the 4 week cards of the month</li>
+                    <li data-step="→">Each card shows all expenses with <strong>category, name, and amount</strong></li>
+                    <li data-step="→"><strong>Credits</strong> (income) appear in green with a "+" sign</li>
+                    <li data-step="→">The <strong>remaining balance</strong> is shown at the bottom of each card</li>
+                    <li data-step="→">Tap <strong>"Current Week"</strong> (bottom right) to jump back to this week</li>
+                </ul>
+
+                <div class="tip-box">
+                    <strong>💡 Tip</strong>
+                    <p>You can <strong>delete expenses</strong> by swiping left on an individual expense within a week
+                        card.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE 6 — MONTHLY PLANNING ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">5</span>
+            Monthly Planning
+        </div>
+        <p class="section-desc">Set your salary, define categories, and control your monthly budget.</p>
+
+        <div class="step-row reverse">
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <div class="phone-notch"></div>
+                    <div style="padding: 16px; background: white; min-height: 100%;">
+                        <h4
+                            style="font-size: 15px; font-weight: 800; color: #1F2937; text-align: center; margin-bottom: 14px;">
+                            📅 Monthly Planning</h4>
+                        <div style="font-size: 10px; color: #6B7280; margin-bottom: 4px; font-weight: 600;">Salary</div>
+                        <div class="mini-input" style="margin-bottom: 14px;">💰 AED 8,000</div>
+
+                        <div style="font-size: 10px; color: #6B7280; margin-bottom: 8px; font-weight: 600;">Budget
+                            Categories</div>
+
+                        <div class="planning-row">
+                            <span class="name">🛒 Market</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="type-badge type-credit">credit</span>
+                                <span class="budget">AED 1,200</span>
+                            </div>
+                        </div>
+                        <div class="planning-row">
+                            <span class="name">☕ Coffee</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="type-badge type-spend">spend</span>
+                                <span class="budget">AED 200</span>
+                            </div>
+                        </div>
+                        <div class="planning-row">
+                            <span class="name">💰 Savings</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="type-badge type-credit">credit</span>
+                                <span class="budget">AED 2,000</span>
+                            </div>
+                        </div>
+                        <div class="planning-row">
+                            <span class="name">🍕 Food Out</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="type-badge type-spend">spend</span>
+                                <span class="budget">AED 600</span>
+                            </div>
+                        </div>
+                        <div class="planning-row" style="border: none;">
+                            <span class="name">🚗 Transport</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="type-badge type-spend">spend</span>
+                                <span class="budget">AED 400</span>
+                            </div>
+                        </div>
+
+                        <div
+                            style="margin-top: 14px; padding-top: 12px; border-top: 2px solid #F3F4F6; display: flex; justify-content: space-between;">
+                            <span style="font-size: 11px; font-weight: 700; color: #6B7280;">Remaining</span>
+                            <span style="font-size: 11px; font-weight: 800; color: #059669;">AED 3,600</span>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; margin-top: 14px;">
+                            <div
+                                style="flex: 1; text-align: center; padding: 8px; background: #F3F4F6; border-radius: 10px; font-size: 10px; font-weight: 600; color: #6B7280;">
+                                Cancel</div>
+                            <div
+                                style="flex: 1; text-align: center; padding: 8px; background: linear-gradient(135deg, #F59E0B, #FB923C); border-radius: 10px; font-size: 10px; font-weight: 700; color: white;">
+                                Save</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <h3>Setting Up Your Monthly Budget</h3>
+                <p>Tap <strong>"📅 Plan"</strong> on the Dashboard or <strong>"Monthly Planning"</strong> in the History
+                    view.</p>
+
+                <ul class="steps-list" style="margin-left: 0; margin-top: 14px;">
+                    <li data-step="1">Enter your <strong>monthly salary</strong></li>
+                    <li data-step="2"><strong>Add categories</strong> with a name, type, and budget amount</li>
+                    <li data-step="3">Choose the <strong>type</strong> for each category:
+                        <br><strong style="color: #16A34A;">Credit</strong> = deductions (market, savings) — subtracted
+                        from salary
+                        <br><strong style="color: #DC2626;">Spend</strong> = discretionary spending that counts against
+                        your weekly budget
+                    </li>
+                    <li data-step="4">Choose <strong>frequency</strong>: weekly (budget per week) or monthly (divided by
+                        4)</li>
+                    <li data-step="5">Tap <strong>Save</strong> — categories will appear in the Add Expense picker</li>
+                </ul>
+
+                <div class="tip-box">
+                    <strong>💡 How Weekly Budget is Calculated</strong>
+                    <p><strong>Weekly categories</strong> → budget per week as-is.
+                        <br><strong>Monthly categories</strong> → budget ÷ 4 = weekly allowance.
+                        <br>The total is your weekly spending target shown in the Dashboard.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE 7 — TELEGRAM & SECURITY ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">6</span>
+            Telegram & Security
+        </div>
+        <p class="section-desc">Link Telegram for password recovery and learn about data security.</p>
+
+        <div class="step-row">
+            <div class="phone-frame" style="min-height: 400px;">
+                <div class="phone-screen" style="min-height: 376px;">
+                    <div class="phone-notch"></div>
+                    <div style="padding: 16px;">
+                        <div style="text-align: center; margin-bottom: 14px;">
+                            <div
+                                style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #F59E0B, #FB923C); display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
+                                🐱</div>
+                            <div style="font-size: 11px; color: #6B7280;">user@email.com</div>
+                        </div>
+                        <div style="height: 1px; background: #F3F4F6; margin-bottom: 6px;"></div>
+                        <div class="menu-item">🔑 Change Password</div>
+                        <div class="menu-item">📱 Link Telegram</div>
+                        <div class="menu-item logout">🚪 Logout</div>
+
+                        <div
+                            style="margin-top: 20px; background: #FFF7ED; border-radius: 14px; padding: 14px; text-align: center;">
+                            <div style="font-size: 13px; font-weight: 700; color: #92400E; margin-bottom: 8px;">📱 Link
+                                Telegram</div>
+                            <div style="font-size: 9px; color: #B45309; margin-bottom: 12px;">Send this code to
+                                <strong>@WeeklyWalletBot</strong></div>
+                            <div
+                                style="font-size: 28px; font-weight: 800; letter-spacing: 8px; color: #F59E0B; font-family: monospace; background: rgba(245,158,11,0.1); border-radius: 12px; padding: 12px;">
+                                483926</div>
+                            <div style="font-size: 8px; color: #D97706; margin-top: 8px;">Expires in 10 minutes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <h3>Linking Your Telegram Account</h3>
+                <p>This enables <strong>password recovery</strong> through Telegram — no email needed.</p>
+
+                <ul class="steps-list" style="margin-left: 0; margin-top: 14px;">
+                    <li data-step="1">Tap the <strong>cat avatar</strong> on the Dashboard</li>
+                    <li data-step="2">Select <strong>"📱 Link Telegram"</strong></li>
+                    <li data-step="3">A <strong>6-digit code</strong> will appear on screen</li>
+                    <li data-step="4">Open Telegram, search for <strong>@WeeklyWalletBot</strong></li>
+                    <li data-step="5"><strong>Send the code</strong> to the bot</li>
+                    <li data-step="6">You'll get a confirmation: <strong>"✅ Account linked!"</strong></li>
+                </ul>
+
+                <h3 style="margin-top: 24px;">🔐 Your Data is Secure</h3>
+                <p>Weekly Wallet uses <strong>end-to-end encryption</strong>:</p>
+                <ul class="steps-list" style="margin-left: 0; margin-top: 10px;">
+                    <li data-step="🔒">All financial data is encrypted with <strong>AES-256-GCM</strong></li>
+                    <li data-step="🔑">Each user has a unique encryption key that is tied to your password</li>
+                    <li data-step="☁️">Data is stored on <strong>Cloudflare R2</strong> — fast and globally distributed
+                    </li>
+                    <li data-step="👀">Nobody (not even the server) can read your financial data</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE 8 — QUICK REFERENCE ═══════════ -->
+    <div class="page">
+        <div class="section-title">
+            <span class="section-number">✨</span>
+            Quick Reference
+        </div>
+        <p class="section-desc">Your cheat sheet for everyday use.</p>
+
+        <div class="features-grid" style="grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 30px;">
+            <div class="feature-card">
+                <div class="emoji">📊</div>
+                <h4>Check Your Balance</h4>
+                <p>Open the app → Dashboard shows your weekly balance instantly.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">➕</div>
+                <h4>Log an Expense</h4>
+                <p>Dashboard → "Add Expense" → fill in details → Add.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">📅</div>
+                <h4>Plan Next Month</h4>
+                <p>"Plan" button → set salary → define categories → Save.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">📈</div>
+                <h4>See Trends</h4>
+                <p>Dashboard → scroll to Trend chart → toggle weekly/monthly.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">🔄</div>
+                <h4>Split a Purchase</h4>
+                <p>Add Expense → set installments → spreads across weeks automatically.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">💰</div>
+                <h4>Track Savings</h4>
+                <p>Add "Savings" category → your deposits accumulate in the savings tracker.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">🔑</div>
+                <h4>Reset Password</h4>
+                <p>Login → "Forgot Password" → enter Telegram username → get code from bot.</p>
+            </div>
+            <div class="feature-card">
+                <div class="emoji">🚀</div>
+                <h4>Hidden Feature</h4>
+                <p>Tap the explosion icon at the bottom of the Dashboard to reveal your <strong>Cash Runway</strong> — a
+                    realistic projection of how long your money will last.</p>
+            </div>
+        </div>
+
+        <div
+            style="margin-top: 50px; text-align: center; padding: 30px; background: linear-gradient(135deg, #FFF7ED, #FEF3C7); border-radius: 24px;">
+            <div style="font-size: 48px; margin-bottom: 12px;">🐱</div>
+            <div style="font-size: 22px; font-weight: 800; color: #92400E; margin-bottom: 8px;">You're All Set!</div>
+            <p style="font-size: 13px; color: #B45309; max-width: 380px; margin: 0 auto; line-height: 1.7;">
+                Start by setting up your <strong>Monthly Planning</strong>, then add your first expense.
+                The Dashboard will come alive with your financial insights.
+            </p>
+            <p style="font-size: 11px; color: #D97706; margin-top: 16px;">
+                Made with ☕ and 🐱 by Renan Buiatti
+            </p>
+        </div>
+    </div>
+
+</body>
+
+</html>
