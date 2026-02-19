@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="packages/frontend/public/chewie.jpg" alt="Pusheen Wallet" width="120" style="border-radius: 50%;" />
+  <img src="packages/frontend/public/chewie.jpg" alt="Weekly Wallet" width="120" style="border-radius: 50%;" />
 </p>
 
-<h1 align="center">🐱 Pusheen Wallet</h1>
+<h1 align="center">🐱 Weekly Wallet</h1>
 
 <p align="center">
   <strong>A personal finance tracker with weekly budgeting, monthly planning, and end-to-end encryption.</strong>
@@ -36,13 +36,13 @@
 ## 🏗️ Architecture
 
 ```
-pusheen-wallet/                  ← npm workspaces monorepo
+weekly-wallet/                   ← npm workspaces monorepo
 ├── packages/
 │   ├── frontend/                ← React + Vite (Cloudflare Pages)
 │   │   ├── src/
 │   │   │   ├── components/      ← Dashboard, WeekCarousel, AddExpenseModal, MonthlyPlanningModal, LoginPage
 │   │   │   ├── lib/             ← api.js, AuthContext.jsx, utils.js
-│   │   │   └── styles/          ← Vanilla CSS with warm Pusheen theme
+│   │   │   └── styles/          ← Vanilla CSS with warm Weekly theme
 │   │   └── vite.config.js
 │   │
 │   ├── backend/                 ← Hono on Cloudflare Workers
@@ -96,8 +96,8 @@ Browser ──JWT──▶ Cloudflare Worker (Hono)
 ### Install
 
 ```bash
-git clone https://github.com/rzb1414/pusheen-wallet.git
-cd pusheen-wallet
+git clone https://github.com/rzb1414/weekly-wallet.git
+cd weekly-wallet
 npm install
 ```
 

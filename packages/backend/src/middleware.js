@@ -1,5 +1,5 @@
 /**
- * Pusheen Wallet — JWT Auth Middleware
+ * Weekly Wallet — JWT Auth Middleware
  * 
  * Verifies Authorization: Bearer <token> header,
  * sets userId and email on the context.

@@ -1,5 +1,5 @@
 /**
- * Pusheen Wallet — Crypto Utilities
+ * Weekly Wallet — Crypto Utilities
  * 
  * Algorithms:
  *   - Password Hashing: scrypt (N=2^17, r=8, p=1) via node:crypto

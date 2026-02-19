@@ -1,5 +1,5 @@
 /**
- * Pusheen Wallet — Monitor Worker
+ * Weekly Wallet — Monitor Worker
  *
  * Runs daily at noon (UTC+4) via Cloudflare Cron Trigger.
  * Performs comprehensive health checks and sends a Telegram report
@@ -40,7 +40,7 @@ export default {
             return new Response('✅ Scheduled check complete. Report sent to Telegram.', { status: 200 });
         }
 
-        return new Response('🐱 Pusheen Wallet Monitor — Use cron or /__trigger', { status: 200 });
+        return new Response('🐱 Weekly Wallet Monitor — Use cron or /__trigger', { status: 200 });
     },
 };
 
@@ -253,7 +253,7 @@ function buildReport(results, passed, failed, totalTime) {
         timeZone: 'UTC',
     });
 
-    let msg = `🐱 *Pusheen Wallet — Daily Monitor*\n`;
+    let msg = `🐱 *Weekly Wallet — Daily Monitor*\n`;
     msg += `📅 ${dateStr} — ${timeStr} (UTC+4)\n\n`;
 
     for (const r of results) {

@@ -1,5 +1,5 @@
 /**
- * Pusheen Wallet — Main Server
+ * Weekly Wallet — Main Server
  * 
  * Hono on Cloudflare Workers with R2 storage.
  * All data routes require JWT auth and use AES-256-GCM encryption.
@@ -20,7 +20,7 @@ import {
 
 const app = new Hono()
 
-app.get('/', (c) => c.text('🐱 Pusheen Wallet Backend is Alive!'))
+app.get('/', (c) => c.text('🐱 Weekly Wallet Backend is Alive!'))
 app.use('/*', cors())
 
 // ──────────────────────────────────────────────
@@ -232,14 +232,14 @@ app.post('/api/telegram/webhook', async (c) => {
             user.telegramLinkedAt = new Date().toISOString()
             await bucket.put(`users/${email}.json`, JSON.stringify(user))
 
-            await reply(`✅ Account linked successfully!\n\n🐱 Welcome, you're now connected to Pusheen Wallet.\n\nYou will receive password reset codes here.`)
+            await reply(`✅ Account linked successfully!\n\n🐱 Welcome, you're now connected to Weekly Wallet.\n\nYou will receive password reset codes here.`)
             return c.json({ ok: true })
           }
         }
       }
 
       // No matching account found
-      await reply('🐱 Welcome to Pusheen Wallet Bot!\n\nTo link your account:\n1. Register with your Telegram username in the app\n2. Come back here and send /start\n\nOr send a 6-digit code from the app menu → "Link Telegram".')
+      await reply('🐱 Welcome to Weekly Wallet Bot!\n\nTo link your account:\n1. Register with your Telegram username in the app\n2. Come back here and send /start\n\nOr send a 6-digit code from the app menu → "Link Telegram".')
       return c.json({ ok: true })
     }
 

@@ -8,7 +8,7 @@ import {
     PieChart, Pie
 } from 'recharts';
 import '../styles/Dashboard.css';
-import pusheenAvatar from '/chewie.jpg';
+import weeklyAvatar from '/chewie.jpg';
 import explosionImg from '/explosion.png'; // Direct import if in public/src or reference as string if in public
 
 const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, onOpenPlanning, onToggleMenu }) => {
@@ -387,8 +387,8 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     <h1>Hi, {user?.email?.split('@')[0] || 'Friend'}!</h1>
                     <p>Financial Health Check 🩺</p>
                 </div>
-                <div className="pusheen-avatar" onClick={onToggleMenu} style={{ cursor: 'pointer' }}>
-                    <img src={pusheenAvatar} alt="Profile" onError={(e) => e.target.style.display = 'none'} />
+                <div className="weekly-avatar" onClick={onToggleMenu} style={{ cursor: 'pointer' }}>
+                    <img src={weeklyAvatar} alt="Profile" onError={(e) => e.target.style.display = 'none'} />
                 </div>
             </header>
 

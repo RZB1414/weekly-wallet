@@ -1,5 +1,5 @@
 /**
- * Pusheen Wallet — Auth Routes
+ * Weekly Wallet — Auth Routes
  * 
  * Routes:
  *   POST /api/auth/register       - Create new user
@@ -315,7 +315,7 @@ auth.post('/forgot-password', async (c) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: user.telegramChatId,
-                        text: `🐱 Pusheen Wallet\n\nYour password reset code:\n\n🔑 ${resetCode}\n\nThis code expires in 1 hour.\nIf you didn't request this, ignore this message.`,
+                        text: `🐱 Weekly Wallet\n\nYour password reset code:\n\n🔑 ${resetCode}\n\nThis code expires in 1 hour.\nIf you didn't request this, ignore this message.`,
                     }),
                 }
             );

@@ -45,7 +45,7 @@ const ResetPasswordPage = ({ email, token, onDone }) => {
             <div className="login-card">
                 <div className="login-header">
                     <span className="login-logo">🐱</span>
-                    <h1 className="login-title">Pusheen Wallet</h1>
+                    <h1 className="login-title">Weekly Wallet</h1>
                     <p className="login-subtitle">Create a new password for your account.</p>
                 </div>
 

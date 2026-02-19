@@ -130,7 +130,7 @@ const LoginPage = () => {
                 {/* Header */}
                 <div className="login-header">
                     <span className="login-logo">🐱</span>
-                    <h1 className="login-title">Pusheen Wallet</h1>
+                    <h1 className="login-title">Weekly Wallet</h1>
                     <p className="login-subtitle">{getSubtitle()}</p>
                 </div>
 
