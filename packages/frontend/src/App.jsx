@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import WeekCarousel from './components/WeekCarousel';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
@@ -93,7 +93,7 @@ const App = () => {
     };
 
     // ── App State ─────────────────────────────────
-    const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'weeks'
+    const [currentView, setCurrentViewRaw] = useState('dashboard'); // 'dashboard' | 'weeks'
     const [weeks, setWeeks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isMonthlyPlanningOpen, setIsMonthlyPlanningOpen] = useState(false);
@@ -308,7 +308,65 @@ const App = () => {
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
     // ── Add Expense Modal State ──
-    const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+    const [isAddExpenseModalOpen, setIsAddExpenseModalOpenRaw] = useState(false);
+
+    // ── Browser History Navigation ──────────────────
+    // Wrap state setters to push/pop history entries for back gesture support
+    const setCurrentView = useCallback((view) => {
+        if (view !== 'dashboard') {
+            window.history.pushState({ view }, '');
+        }
+        setCurrentViewRaw(view);
+    }, []);
+
+    const setIsAddExpenseModalOpen = useCallback((open) => {
+        if (open) window.history.pushState({ modal: 'addExpense' }, '');
+        setIsAddExpenseModalOpenRaw(open);
+    }, []);
+
+    const openMonthlyPlanning = useCallback(() => {
+        window.history.pushState({ modal: 'planning' }, '');
+        setIsMonthlyPlanningOpen(true);
+    }, []);
+
+    const closeMonthlyPlanning = useCallback(() => {
+        setIsMonthlyPlanningOpen(false);
+    }, []);
+
+    // Listen for popstate (browser back gesture / button)
+    useEffect(() => {
+        const handlePopState = (e) => {
+            // Close modals first, then navigate views
+            if (showTelegramLink) {
+                setShowTelegramLink(false);
+                return;
+            }
+            if (showChangePwd) {
+                setShowChangePwd(false);
+                return;
+            }
+            if (showUserMenu) {
+                setShowUserMenu(false);
+                return;
+            }
+            if (isAddExpenseModalOpen) {
+                setIsAddExpenseModalOpenRaw(false);
+                return;
+            }
+            if (isMonthlyPlanningOpen) {
+                setIsMonthlyPlanningOpen(false);
+                return;
+            }
+            // Navigate back to dashboard from weeks view
+            if (currentView !== 'dashboard') {
+                setCurrentViewRaw('dashboard');
+                return;
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [currentView, isAddExpenseModalOpen, isMonthlyPlanningOpen, showChangePwd, showTelegramLink, showUserMenu]);
 
     const handleOpenAddExpense = () => {
         setIsAddExpenseModalOpen(true);
@@ -388,14 +446,14 @@ const App = () => {
                     totalSavings={totalSavings}
                     onNavigate={(view) => setCurrentView(view)}
                     onAddExpense={() => setIsAddExpenseModalOpen(true)}
-                    onOpenPlanning={() => setIsMonthlyPlanningOpen(true)}
+                    onOpenPlanning={openMonthlyPlanning}
                     onToggleMenu={() => setShowUserMenu(!showUserMenu)}
                 />
             ) : (
                 <div style={{ display: isAnyModalOpen ? 'none' : 'block', height: '100%' }}>
                     {/* Back to Dashboard Button */}
                     <button
-                        onClick={() => setCurrentView('dashboard')}
+                        onClick={() => { setCurrentViewRaw('dashboard'); window.history.back(); }}
                         style={{
                             position: 'absolute',
                             top: '20px',
@@ -466,7 +524,7 @@ const App = () => {
 
                     <button
                         className="monthly-planning-btn"
-                        onClick={() => setIsMonthlyPlanningOpen(true)}
+                        onClick={openMonthlyPlanning}
                     >
                         Monthly Planning
                     </button>
@@ -517,7 +575,7 @@ const App = () => {
 
             <MonthlyPlanningModal
                 isOpen={isMonthlyPlanningOpen}
-                onClose={() => setIsMonthlyPlanningOpen(false)}
+                onClose={closeMonthlyPlanning}
                 weeks={weeks}
                 onUpdateWeeks={setWeeks}
                 onPlanSave={(year, month, categories) => {

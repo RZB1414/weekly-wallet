@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { formatCurrency, formatDate, getFinancialInfo, calculateRemaining } from '../lib/utils';
@@ -16,6 +16,14 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     const [showRunway, setShowRunway] = useState(false);
     const [barTooltipActive, setBarTooltipActive] = useState(false);
     const barChartRef = useRef(null);
+    const [chartsReady, setChartsReady] = useState(false);
+
+    // Defer chart rendering until after initial layout to prevent ResponsiveContainer
+    // from measuring before the DOM has settled (which causes width=-1 errors).
+    useLayoutEffect(() => {
+        const frame = requestAnimationFrame(() => setChartsReady(true));
+        return () => cancelAnimationFrame(frame);
+    }, []);
 
     // Dismiss bar chart tooltip on outside click
     useEffect(() => {
@@ -314,99 +322,105 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
             <section className="charts-section">
                 <div className="chart-card wide">
                     <h3>Weekly Goals</h3>
-                    <div ref={barChartRef} style={{ width: '100%', height: 280, position: 'relative' }} onClick={() => setBarTooltipActive(true)}>
-                        <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                            <BarChart data={barChartData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                <XAxis
-                                    dataKey="name"
-                                    tick={{ fill: '#6B7280', fontSize: 12, fontFamily: 'Inter' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    hide
-                                />
-                                <Tooltip
-                                    active={barTooltipActive ? undefined : false}
-                                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                    formatter={(value) => formatCurrency(value)}
-                                />
-                                <Bar dataKey="Actual" radius={[6, 6, 6, 6]} barSize={40}>
-                                    {barChartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div ref={barChartRef} style={{ width: '100%', minWidth: 1, height: 280, minHeight: 1, position: 'relative', overflow: 'hidden' }} onClick={() => setBarTooltipActive(true)}>
+                        {chartsReady && (
+                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
+                                <BarChart data={barChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fill: '#6B7280', fontSize: 12, fontFamily: 'Inter' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis
+                                        hide
+                                    />
+                                    <Tooltip
+                                        active={barTooltipActive ? undefined : false}
+                                        cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        formatter={(value) => formatCurrency(value)}
+                                    />
+                                    <Bar dataKey="Actual" radius={[6, 6, 6, 6]} barSize={40}>
+                                        {barChartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
                 <div className="chart-card">
                     <h3>Trend</h3>
-                    <div style={{ width: '100%', height: 250, position: 'relative' }}>
-                        <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                            <LineChart data={trendData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                                <XAxis
-                                    dataKey="name"
-                                    tick={{ fill: '#6B7280', fontSize: 12, fontFamily: 'Inter' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis hide />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                    formatter={(value) => formatCurrency(value)}
-                                />
-                                <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                                <Line
-                                    type="monotone"
-                                    dataKey="Ideal"
-                                    stroke="#CBD5E1"
-                                    strokeDasharray="5 5"
-                                    strokeWidth={2}
-                                    dot={false}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="Actual"
-                                    stroke="#F59E0B"
-                                    strokeWidth={3}
-                                    dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                    <div style={{ width: '100%', minWidth: 1, height: 250, minHeight: 1, position: 'relative', overflow: 'hidden' }}>
+                        {chartsReady && (
+                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
+                                <LineChart data={trendData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fill: '#6B7280', fontSize: 12, fontFamily: 'Inter' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis hide />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        formatter={(value) => formatCurrency(value)}
+                                    />
+                                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="Ideal"
+                                        stroke="#CBD5E1"
+                                        strokeDasharray="5 5"
+                                        strokeWidth={2}
+                                        dot={false}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="Actual"
+                                        stroke="#F59E0B"
+                                        strokeWidth={3}
+                                        dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
                 <div className="chart-card">
                     <h3>Categories</h3>
-                    <div style={{ width: '100%', height: 220, position: 'relative' }}>
-                        <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                            <PieChart>
-                                <Pie
-                                    data={donutData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {donutData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                    formatter={(value) => formatCurrency(value)}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <div style={{ width: '100%', minWidth: 1, height: 220, minHeight: 1, position: 'relative', overflow: 'hidden' }}>
+                        {chartsReady && (
+                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
+                                <PieChart>
+                                    <Pie
+                                        data={donutData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {donutData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        formatter={(value) => formatCurrency(value)}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
 
                     {/* Custom Legend */}
