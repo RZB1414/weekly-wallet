@@ -46,6 +46,7 @@
     margin: 0;
     letter-spacing: -0.03em;
     background: linear-gradient(135deg, #111827 0%, #4B5563 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -69,6 +70,9 @@
     border: 1px solid rgba(255, 255, 255, 0.8);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    outline: none;
 }
 
 .pusheen-avatar:hover {
@@ -80,6 +84,9 @@
     height: 100%;
     border-radius: 16px;
     object-fit: cover;
+    pointer-events: none;
+    user-drag: none;
+    -webkit-user-drag: none;
 }
 
 /* ── KPI Section (Glass Cards) ─────────────────── */
@@ -152,18 +159,21 @@
 
 .kpi-value.positive {
     background: linear-gradient(135deg, #059669 0%, #34D399 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .kpi-value.negative {
     background: linear-gradient(135deg, #DC2626 0%, #F87171 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .kpi-value.warning {
     background: linear-gradient(135deg, #D97706 0%, #FBBF24 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }

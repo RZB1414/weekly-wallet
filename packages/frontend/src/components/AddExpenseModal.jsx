@@ -118,33 +118,15 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                             <div className="form-group" style={{ flexDirection: 'row', gap: '10px' }}>
                                 <button
                                     type="button"
-                                    className={`type-btn ${type === 'expense' ? 'active' : ''}`}
+                                    className={`type-btn expense ${type === 'expense' ? 'active' : ''}`}
                                     onClick={() => setType('expense')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '8px',
-                                        background: type === 'expense' ? '#ff5252' : 'rgba(255,255,255,0.1)',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        cursor: 'pointer'
-                                    }}
                                 >
                                     Expense
                                 </button>
                                 <button
                                     type="button"
-                                    className={`type-btn ${type === 'credit' ? 'active' : ''}`}
+                                    className={`type-btn credit ${type === 'credit' ? 'active' : ''}`}
                                     onClick={() => setType('credit')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '8px',
-                                        background: type === 'credit' ? '#4caf50' : 'rgba(255,255,255,0.1)',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        cursor: 'pointer'
-                                    }}
                                 >
                                     Credit
                                 </button>

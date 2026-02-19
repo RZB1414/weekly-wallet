@@ -142,3 +142,34 @@
         padding: 0.8rem 2.5rem;
     }
 }
+
+/* Type Toggle Buttons */
+.type-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 12px;
+    background: var(--color-soft-gray);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.type-btn:hover {
+    filter: brightness(0.95);
+}
+
+.type-btn.active.expense {
+    background: #EF4444;
+    /* Standard Red */
+    color: white;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+}
+
+.type-btn.active.credit {
+    background: #10B981;
+    /* Standard Green */
+    color: white;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}

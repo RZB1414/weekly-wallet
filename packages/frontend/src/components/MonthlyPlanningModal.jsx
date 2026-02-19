@@ -24,11 +24,13 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryBudget, setNewCategoryBudget] = useState('');
     const [newCategoryType, setNewCategoryType] = useState('credit'); // 'credit' (standard) | 'spend' (deducts budget)
+    const [newCategoryFrequency, setNewCategoryFrequency] = useState('monthly'); // 'monthly' | 'weekly'
     const [expandedCategoryId, setExpandedCategoryId] = useState(null);
     const [editingCategoryId, setEditingCategoryId] = useState(null);
     const [editCategoryName, setEditCategoryName] = useState('');
     const [editCategoryBudget, setEditCategoryBudget] = useState('');
     const [editCategoryType, setEditCategoryType] = useState('credit');
+    const [editCategoryFrequency, setEditCategoryFrequency] = useState('monthly');
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -82,9 +84,9 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     };
 
     const defaultCategories = () => [
-        { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit' },
-        { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit' },
-        { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit' },
+        { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
+        { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'monthly' },
+        { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
     ];
 
     const loadData = async () => {
@@ -95,9 +97,9 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             // Migrate legacy categories (strings) to objects if needed
             const loadedCategories = (data.categories || []).map(cat => {
                 if (typeof cat === 'string') {
-                    return { id: Date.now() + Math.random(), name: cat, budget: 0, type: 'credit' };
+                    return { id: Date.now() + Math.random(), name: cat, budget: 0, type: 'credit', frequency: 'monthly' };
                 }
-                return { ...cat, type: cat.type || 'credit' }; // Ensure type exists
+                return { ...cat, type: cat.type || 'credit', frequency: cat.frequency || 'monthly' }; // Ensure type/frequency exists
             });
 
             setCategories(loadedCategories.length > 0 ? loadedCategories : defaultCategories());
@@ -120,9 +122,9 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setIsEditing(true);
         setView('DETAIL');
         setCategories([
-            { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit' },
-            { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit' },
-            { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit' },
+            { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
+            { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'monthly' },
+            { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
         ]);
         setSalary(0);
         setSalaryInput('');
@@ -176,7 +178,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             id: Date.now(),
             name: newCategoryName.trim(),
             budget: !isNaN(budgetVal) ? budgetVal : 0,
-            type: newCategoryType
+            type: newCategoryType,
+            frequency: newCategoryFrequency
         };
 
         const updatedCategories = [...categories, newCat];
@@ -184,6 +187,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setNewCategoryName('');
         setNewCategoryBudget('');
         setNewCategoryType('credit'); // Reset to default
+        setNewCategoryFrequency('monthly');
     };
 
     const handleDeleteCategory = (id) => {
@@ -235,6 +239,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setEditCategoryName(cat.name);
         setEditCategoryBudget(cat.budget.toString());
         setEditCategoryType(cat.type || 'credit');
+        setEditCategoryFrequency(cat.frequency || 'monthly');
     };
 
     const handleSaveEditCategory = (id) => {
@@ -245,7 +250,8 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                     ...c,
                     name: editCategoryName.trim() || c.name,
                     budget: !isNaN(budgetVal) ? budgetVal : c.budget,
-                    type: editCategoryType
+                    type: editCategoryType,
+                    frequency: editCategoryFrequency
                 };
             }
             return c;
@@ -423,6 +429,25 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                                             Spend
                                                         </button>
                                                     </div>
+
+                                                    {/* Frequency Toggle */}
+                                                    <div className="transaction-type-toggle" style={{ marginBottom: '10px' }}>
+                                                        <button
+                                                            className={`type-btn ${editCategoryFrequency === 'monthly' ? 'active' : ''}`}
+                                                            onClick={() => setEditCategoryFrequency('monthly')}
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            Monthly
+                                                        </button>
+                                                        <button
+                                                            className={`type-btn ${editCategoryFrequency === 'weekly' ? 'active' : ''}`}
+                                                            onClick={() => setEditCategoryFrequency('weekly')}
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            Weekly
+                                                        </button>
+                                                    </div>
+
                                                     <input
                                                         type="text"
                                                         value={editCategoryName}
@@ -456,7 +481,12 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                             ) : (
                                                 <>
                                                     <div className="cat-sum-header">
-                                                        <span>{cat.name} <small style={{ fontWeight: 'normal', opacity: 0.7, fontSize: '0.7em' }}>({cat.type === 'spend' ? 'Spend' : 'Credit'})</small></span>
+                                                        <span>
+                                                            {cat.name}
+                                                            <small style={{ fontWeight: 'normal', opacity: 0.7, fontSize: '0.7em', marginLeft: '5px' }}>
+                                                                ({cat.type === 'spend' ? 'Spend' : 'Credit'} • {cat.frequency === 'weekly' ? 'Weekly' : 'Monthly'})
+                                                            </small>
+                                                        </span>
                                                         <span>AED {cat.budget.toFixed(2)}</span>
                                                     </div>
                                                     <div className="cat-sum-row">
@@ -534,6 +564,22 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                             onClick={() => setNewCategoryType('spend')}
                                         >
                                             Spend
+                                        </button>
+                                    </div>
+                                    <div className="transaction-type-toggle" style={{ marginBottom: '10px' }}>
+                                        <button
+                                            className={`type-btn ${newCategoryFrequency === 'monthly' ? 'active' : ''}`}
+                                            onClick={() => setNewCategoryFrequency('monthly')}
+                                            style={{ flex: 1 }}
+                                        >
+                                            Monthly
+                                        </button>
+                                        <button
+                                            className={`type-btn ${newCategoryFrequency === 'weekly' ? 'active' : ''}`}
+                                            onClick={() => setNewCategoryFrequency('weekly')}
+                                            style={{ flex: 1 }}
+                                        >
+                                            Weekly
                                         </button>
                                     </div>
                                     <div className="add-category-form">

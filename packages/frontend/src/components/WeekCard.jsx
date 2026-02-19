@@ -36,9 +36,10 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
     // Market Logic
     const marketCategory = categories.find(c => c.name.toLowerCase() === 'market' || c.name.toLowerCase() === 'mercado');
-    // Note: Category object from MonthlyPlanning uses 'budget', but we fallback to 0 safely
-    const monthlyMarketBudget = marketCategory ? (marketCategory.budget || 0) : 0;
-    const weeklyMarketBudget = monthlyMarketBudget / 4;
+    // Calculate Budget based on Frequency
+    const marketBudget = marketCategory ? (marketCategory.budget || 0) : 0;
+    const isMarketWeekly = marketCategory?.frequency === 'weekly';
+    const weeklyMarketBudget = isMarketWeekly ? marketBudget : marketBudget / 4;
 
     // Calculate spent specific to market
     const marketExpenses = week.expenses.filter(e =>
@@ -49,13 +50,19 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
     // Coffee Logic
     const coffeeCategory = categories.find(c => c.name.toLowerCase() === 'coffee' || c.name.toLowerCase() === 'café');
-    const monthlyCoffeeBudget = coffeeCategory ? (coffeeCategory.budget || 0) : 0;
+    const coffeeBudget = coffeeCategory ? (coffeeCategory.budget || 0) : 0;
+    const isCoffeeWeekly = coffeeCategory?.frequency === 'weekly';
+
+    // For Coffee, we display the defined budget (whether weekly or monthly)
+    // If Weekly, we compare match weekly spend to weekly budget.
+    // If Monthly, we compare weekly spend to monthly budget (legacy behavior preserved).
+    const displayCoffeeBudget = coffeeBudget;
 
     const coffeeExpenses = week.expenses.filter(e =>
         e.category.toLowerCase() === 'coffee' || e.category.toLowerCase() === 'café'
     );
     const coffeeSpent = coffeeExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const coffeeRemaining = monthlyCoffeeBudget - coffeeSpent;
+    const coffeeRemaining = displayCoffeeBudget - coffeeSpent;
 
     // Savings Logic
     const savingsCategory = categories.find(c => c.name.toLowerCase() === 'savings' || c.name.toLowerCase() === 'poupança');
@@ -145,8 +152,8 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                     <div className="supermarket-view">
                         <div className="supermarket-summary">
                             <div className="summary-item">
-                                <span className="label">Monthly Budget</span>
-                                <span className="value">{formatCurrency(monthlyCoffeeBudget)}</span>
+                                <span className="label">{isCoffeeWeekly ? 'Weekly Budget' : 'Monthly Budget'}</span>
+                                <span className="value">{formatCurrency(displayCoffeeBudget)}</span>
                             </div>
                             <div className="summary-item main">
                                 <span className="label">Remaining</span>
