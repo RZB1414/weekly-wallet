@@ -52,16 +52,17 @@ button {
   letter-spacing: -0.02em;
 }
 
-/* Barra de rolagem 'Sunny' */
+/* Barra de rolagem 'Sunny' - Hidden per user request */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 0px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
+  background: transparent;
   border-radius: 10px;
 }

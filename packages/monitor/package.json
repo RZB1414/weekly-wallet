@@ -1,0 +1,12 @@
+{
+    "name": "pusheen-wallet-monitor",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "start": "wrangler dev",
+        "deploy": "wrangler deploy"
+    },
+    "devDependencies": {
+        "wrangler": "^3.0.0"
+    }
+}

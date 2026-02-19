@@ -15,7 +15,10 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     const { user } = useAuth();
     const [showRunway, setShowRunway] = useState(false);
     const [barTooltipActive, setBarTooltipActive] = useState(false);
+    const [trendTooltipActive, setTrendTooltipActive] = useState(false);
+    const [trendView, setTrendView] = useState('weekly'); // 'weekly' | 'monthly'
     const barChartRef = useRef(null);
+    const trendChartRef = useRef(null);
     const [chartsReady, setChartsReady] = useState(false);
 
     // Defer chart rendering until after initial layout to prevent ResponsiveContainer
@@ -25,11 +28,14 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         return () => cancelAnimationFrame(frame);
     }, []);
 
-    // Dismiss bar chart tooltip on outside click
+    // Dismiss charts tooltip on outside click
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (barChartRef.current && !barChartRef.current.contains(e.target)) {
                 setBarTooltipActive(false);
+            }
+            if (trendChartRef.current && !trendChartRef.current.contains(e.target)) {
+                setTrendTooltipActive(false);
             }
         };
         document.addEventListener('click', handleClickOutside, true);
@@ -146,30 +152,78 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
     // Trend Data
     const trendData = useMemo(() => {
-        const weeklyBudget = categories.reduce((sum, cat) => {
-            if (cat.frequency === 'weekly') {
-                return sum + (cat.budget || 0);
-            }
-            return sum + ((cat.budget || 0) / 4);
-        }, 0);
-        let cumulativeActual = 0;
-        let cumulativeIdeal = 0;
+        if (trendView === 'weekly') {
+            const weeklyBudget = categories.reduce((sum, cat) => {
+                if (cat.frequency === 'weekly') {
+                    return sum + (cat.budget || 0);
+                }
+                return sum + ((cat.budget || 0) / 4);
+            }, 0);
+            let cumulativeActual = 0;
+            let cumulativeIdeal = 0;
 
-        return currentMonthWeeks.map((week, index) => {
-            const spent = week.expenses
-                .filter(e => e.type !== 'credit')
-                .reduce((sum, e) => sum + Number(e.amount), 0);
+            return currentMonthWeeks.map((week, index) => {
+                const spent = week.expenses
+                    .filter(e => e.type !== 'credit')
+                    .reduce((sum, e) => sum + Number(e.amount), 0);
 
-            cumulativeActual += spent;
-            cumulativeIdeal += weeklyBudget;
+                cumulativeActual += spent;
+                cumulativeIdeal += weeklyBudget;
 
-            return {
-                name: `W${index + 1}`,
-                Ideal: cumulativeIdeal,
-                Actual: cumulativeActual
-            };
-        });
-    }, [currentMonthWeeks, categories]);
+                return {
+                    name: `W${index + 1}`,
+                    Ideal: cumulativeIdeal,
+                    Actual: cumulativeActual
+                };
+            });
+        } else {
+            // Monthly View
+            // 1. Calculate Monthly Budget Ideal
+            const monthlyBudget = categories.reduce((sum, cat) => {
+                if (cat.frequency === 'monthly') {
+                    return sum + (cat.budget || 0);
+                }
+                return sum + ((cat.budget || 0) * 4);
+            }, 0);
+
+            // 2. Group weeks by month
+            const monthsMap = new Map(); // "YYYY-MM" -> { spent: 0, order: timestamp }
+
+            weeks.forEach(week => {
+                const date = new Date(week.startDate);
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+
+                if (!monthsMap.has(key)) {
+                    monthsMap.set(key, { spent: 0, timestamp: date.getTime(), label: date.toLocaleString('en-US', { month: 'short' }) });
+                }
+
+                const spent = week.expenses
+                    .filter(e => e.type !== 'credit')
+                    .reduce((sum, e) => sum + Number(e.amount), 0);
+
+                const entry = monthsMap.get(key);
+                entry.spent += spent;
+            });
+
+            // 3. Convert to array and sort
+            const sortedMonths = Array.from(monthsMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+
+            // 4. Generate Cumulative Data
+            let cumulativeActual = 0;
+            let cumulativeIdeal = 0;
+
+            return sortedMonths.map(m => {
+                cumulativeActual += m.spent;
+                cumulativeIdeal += monthlyBudget;
+
+                return {
+                    name: m.label,
+                    Ideal: cumulativeIdeal,
+                    Actual: cumulativeActual
+                };
+            });
+        }
+    }, [currentMonthWeeks, weeks, categories, trendView]);
 
     // Donut Data
     const donutData = useMemo(() => {
@@ -406,8 +460,33 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
 
                 <div className="chart-card">
-                    <h3>Trend</h3>
-                    <div style={{ width: '100%', minWidth: 1, height: 250, minHeight: 1, position: 'relative', overflow: 'hidden' }}>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h3 style={{ margin: 0 }}>Trend</h3>
+                        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', borderRadius: '99px', padding: '2px' }}>
+                            {['weekly', 'monthly'].map(view => (
+                                <button
+                                    key={view}
+                                    onClick={() => setTrendView(view)}
+                                    style={{
+                                        background: trendView === view ? '#fff' : 'transparent',
+                                        border: 'none',
+                                        borderRadius: '99px',
+                                        padding: '4px 12px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        color: trendView === view ? '#F59E0B' : '#6B7280',
+                                        boxShadow: trendView === view ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                        cursor: 'pointer',
+                                        textTransform: 'capitalize'
+                                    }}
+                                >
+                                    {view}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div ref={trendChartRef} style={{ width: '100%', minWidth: 1, height: 250, minHeight: 1, position: 'relative', overflow: 'hidden' }} onClick={() => setTrendTooltipActive(true)}>
                         {chartsReady && (
                             <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
                                 <LineChart data={trendData}>
@@ -420,6 +499,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                     />
                                     <YAxis hide />
                                     <Tooltip
+                                        active={trendTooltipActive ? undefined : false}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                         formatter={(value) => formatCurrency(value)}
                                     />
