@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
-import { formatCurrency, formatDate, getFinancialInfo, calculateRemaining } from '../lib/utils';
+import { formatCurrency, formatDate, getFinancialInfo, getMonthQuarters, calculateRemaining } from '../lib/utils';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
     LineChart, Line, CartesianGrid, Legend,
@@ -85,9 +85,21 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
     // ── 2. Chart Data Preparation ───────────────────────
 
+    // Current month's quarter weeks (properly matched)
+    const currentMonthWeeks = useMemo(() => {
+        const now = new Date();
+        const { year, month } = getFinancialInfo(now);
+        const quarters = getMonthQuarters(year, month);
+
+        return quarters.map(q => {
+            const existing = weeks.find(w => w.id === q.id);
+            return existing || { id: q.id, startDate: q.start, endDate: q.end, expenses: [] };
+        });
+    }, [weeks]);
+
     // Bar Chart
     const barChartData = useMemo(() => {
-        if (!weeks) return [];
+        if (!currentMonthWeeks) return [];
 
         const weeklyBudget = categories.reduce((sum, cat) => {
             if (cat.frequency === 'weekly') {
@@ -96,7 +108,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
             return sum + ((cat.budget || 0) / 4);
         }, 0);
 
-        return weeks.slice(0, 4).map((week, index) => {
+        return currentMonthWeeks.map((week, index) => {
             const spent = week.expenses
                 .filter(e => e.type !== 'credit')
                 .reduce((sum, e) => sum + Number(e.amount), 0);
@@ -113,7 +125,24 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 fill
             };
         });
-    }, [weeks, categories]);
+    }, [currentMonthWeeks, categories]);
+
+    // Monthly Budget Remaining %
+    const monthlyRemainingPct = useMemo(() => {
+        if (!currentMonthWeeks || currentMonthWeeks.length === 0) return null;
+
+        const monthlyBudget = categories.reduce((sum, cat) => sum + (cat.budget || 0), 0);
+        if (monthlyBudget <= 0) return null;
+
+        const totalSpent = currentMonthWeeks.reduce((total, week) => {
+            return total + week.expenses
+                .filter(e => e.type !== 'credit')
+                .reduce((sum, e) => sum + Number(e.amount), 0);
+        }, 0);
+
+        const remaining = Math.max(0, monthlyBudget - totalSpent);
+        return Math.round((remaining / monthlyBudget) * 100);
+    }, [currentMonthWeeks, categories]);
 
     // Trend Data
     const trendData = useMemo(() => {
@@ -126,7 +155,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         let cumulativeActual = 0;
         let cumulativeIdeal = 0;
 
-        return weeks.map((week, index) => {
+        return currentMonthWeeks.map((week, index) => {
             const spent = week.expenses
                 .filter(e => e.type !== 'credit')
                 .reduce((sum, e) => sum + Number(e.amount), 0);
@@ -140,13 +169,13 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 Actual: cumulativeActual
             };
         });
-    }, [weeks, categories]);
+    }, [currentMonthWeeks, categories]);
 
     // Donut Data
     const donutData = useMemo(() => {
         const catMap = {};
         let total = 0;
-        weeks.forEach(week => {
+        currentMonthWeeks.forEach(week => {
             week.expenses.forEach(e => {
                 if (e.type === 'credit') return;
                 const amount = Number(e.amount);
@@ -172,7 +201,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
         top5.push({ name: 'Others', value: othersValue, percent: othersPercent });
         return top5;
-    }, [weeks]);
+    }, [currentMonthWeeks]);
 
     // Happy & Warm Palette
     const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#EC4899', '#8B5CF6', '#6B7280'];
@@ -321,11 +350,34 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
             <section className="charts-section">
                 <div className="chart-card wide">
-                    <h3>Weekly Goals</h3>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        Weekly Goals
+                        {monthlyRemainingPct !== null && (
+                            <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                                background: monthlyRemainingPct >= 50
+                                    ? 'rgba(16, 185, 129, 0.12)'
+                                    : monthlyRemainingPct >= 20
+                                        ? 'rgba(251, 191, 36, 0.15)'
+                                        : 'rgba(248, 113, 113, 0.15)',
+                                color: monthlyRemainingPct >= 50
+                                    ? '#059669'
+                                    : monthlyRemainingPct >= 20
+                                        ? '#D97706'
+                                        : '#DC2626',
+                                letterSpacing: '-0.01em',
+                            }}>
+                                {new Date().toLocaleString('en-US', { month: 'short' })} -  {monthlyRemainingPct}% left
+                            </span>
+                        )}
+                    </h3>
                     <div ref={barChartRef} style={{ width: '100%', minWidth: 1, height: 280, minHeight: 1, position: 'relative', overflow: 'hidden' }} onClick={() => setBarTooltipActive(true)}>
                         {chartsReady && (
                             <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                                <BarChart data={barChartData}>
+                                <BarChart key={barChartData.map(d => d.Actual).join(',')} data={barChartData}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                                     <XAxis
                                         dataKey="name"
