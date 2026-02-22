@@ -10,12 +10,15 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [telegramUsername, setTelegramUsername] = useState('');
-    const [resetCode, setResetCode] = useState('');
+    const [recoveryKey, setRecoveryKey] = useState('');
+    const [recoverySecretToDisplay, setRecoverySecretToDisplay] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [copiedKey, setCopiedKey] = useState(false);
+    const [tempToken, setTempToken] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -31,17 +34,24 @@ const LoginPage = () => {
                     return;
                 }
                 if (telegramUsername) {
-                    // Register WITHOUT auto-login so we can show link-telegram screen
+                    // Register WITHOUT auto-login so we can show link-telegram screen or recovery key
                     const result = await api.auth.register(email, password, telegramUsername);
                     if (result.error) {
                         setError(result.error);
                     } else {
-                        setMode('link-telegram');
+                        // Registration success. User MUST save the recovery key.
+                        setTempToken(result.token);
+                        setRecoverySecretToDisplay(result.recoverySecret);
+                        setMode('presentation-recovery-key');
                     }
                 } else {
-                    const result = await register(email, password);
+                    const result = await api.auth.register(email, password);
                     if (result.error) {
                         setError(result.error);
+                    } else {
+                        setTempToken(result.token);
+                        setRecoverySecretToDisplay(result.recoverySecret);
+                        setMode('presentation-recovery-key');
                     }
                 }
             } else if (mode === 'login') {
@@ -50,43 +60,23 @@ const LoginPage = () => {
                     setError(result.error);
                 }
             } else if (mode === 'forgot') {
-                if (!telegramUsername.trim()) {
-                    setError('Please enter your Telegram username');
+                if (!email.trim() || !recoveryKey.trim() || !newPassword.trim()) {
+                    setError('Please fill all fields');
                     setLoading(false);
                     return;
                 }
-                const result = await api.auth.forgotPassword(telegramUsername);
-                if (result.success) {
-                    setSuccess('A reset code has been sent to your Telegram.');
-                    // Switch to code entry mode after short delay
-                    setTimeout(() => {
-                        setMode('verify-code');
-                        setSuccess('');
-                    }, 1500);
-                } else {
-                    setError(result.error || 'Something went wrong');
-                }
-            } else if (mode === 'verify-code') {
-                if (resetCode.length !== 6) {
-                    setError('Please enter the 6-digit code');
-                    setLoading(false);
-                    return;
-                }
-                // Move to password reset step
-                setMode('reset');
-            } else if (mode === 'reset') {
                 if (newPassword !== confirmNewPassword) {
                     setError('Passwords do not match');
                     setLoading(false);
                     return;
                 }
-                const result = await api.auth.resetPassword(email, resetCode, newPassword);
+                const result = await api.auth.resetPassword(email, recoveryKey, newPassword);
                 if (result.success) {
                     setSuccess(result.message || 'Password reset! You can now sign in.');
                     setTimeout(() => {
                         setMode('login');
                         setSuccess('');
-                        setResetCode('');
+                        setRecoveryKey('');
                         setNewPassword('');
                         setConfirmNewPassword('');
                     }, 2000);
@@ -105,10 +95,9 @@ const LoginPage = () => {
         switch (mode) {
             case 'login': return 'Welcome back! Sign in to your account.';
             case 'register': return 'Create your secure account.';
-            case 'forgot': return 'Enter your Telegram username to receive a reset code.';
-            case 'verify-code': return 'Enter the 6-digit code sent to your Telegram.';
-            case 'reset': return 'Create a new password for your account.';
-            case 'link-telegram': return 'Link your Telegram to enable password recovery.';
+            case 'forgot': return 'Recover your account using your Recovery Key.';
+            case 'presentation-recovery-key': return 'CRITICAL: Save your Recovery Key';
+            case 'link-telegram': return 'Link your Telegram to easily receive your key.';
             default: return '';
         }
     };
@@ -136,8 +125,8 @@ const LoginPage = () => {
 
                 {/* Form */}
                 <form className="login-form" onSubmit={handleSubmit}>
-                    {/* Email — shown in login, register only */}
-                    {(mode === 'login' || mode === 'register') && (
+                    {/* Email — shown in login, register, AND forgot */}
+                    {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
                             <input
@@ -149,25 +138,6 @@ const LoginPage = () => {
                                 required
                                 autoComplete="email"
                             />
-                        </div>
-                    )}
-
-                    {/* Telegram Username — forgot mode */}
-                    {mode === 'forgot' && (
-                        <div className="form-group">
-                            <label htmlFor="forgot-telegram">Telegram Username</label>
-                            <input
-                                id="forgot-telegram"
-                                type="text"
-                                value={telegramUsername}
-                                onChange={(e) => setTelegramUsername(e.target.value)}
-                                placeholder="@your_username"
-                                required
-                                autoComplete="off"
-                            />
-                            <small style={{ color: 'var(--color-text-muted)', opacity: 0.6, fontSize: '0.75rem' }}>
-                                The username you registered with
-                            </small>
                         </div>
                     )}
 
@@ -188,7 +158,7 @@ const LoginPage = () => {
                         </div>
                     )}
 
-                    {/* Confirm Password — register only */}
+                    {/* Confirm Password & Telegram Linking — register only */}
                     {mode === 'register' && (
                         <>
                             <div className="form-group">
@@ -221,46 +191,25 @@ const LoginPage = () => {
                         </>
                     )}
 
-                    {/* 6-digit Code Input — verify-code mode */}
-                    {mode === 'verify-code' && (
+                    {/* Recovery Key — forgot mode */}
+                    {mode === 'forgot' && (
                         <div className="form-group">
-                            <label htmlFor="reset-code">Reset Code</label>
+                            <label htmlFor="recovery-key">Recovery Key</label>
                             <input
-                                id="reset-code"
+                                id="recovery-key"
                                 type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]{6}"
-                                maxLength={6}
-                                value={resetCode}
-                                onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                placeholder="000000"
+                                value={recoveryKey}
+                                onChange={(e) => setRecoveryKey(e.target.value)}
+                                placeholder="pw-rec-..."
                                 required
-                                autoComplete="one-time-code"
-                                style={{
-                                    textAlign: 'center',
-                                    fontSize: '1.5rem',
-                                    letterSpacing: '8px',
-                                    fontFamily: 'monospace',
-                                }}
+                                autoComplete="off"
+                                style={{ fontFamily: 'monospace' }}
                             />
                         </div>
                     )}
-
-                    {/* New Password fields — reset mode */}
-                    {mode === 'reset' && (
+                    {/* New Password fields — forgot mode */}
+                    {mode === 'forgot' && (
                         <>
-                            <div className="form-group">
-                                <label htmlFor="reset-email">Email</label>
-                                <input
-                                    id="reset-email"
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com"
-                                    required
-                                    autoComplete="email"
-                                />
-                            </div>
                             <div className="form-group">
                                 <label htmlFor="new-password">New Password</label>
                                 <input
@@ -296,8 +245,8 @@ const LoginPage = () => {
                     <button
                         type="submit"
                         className="login-btn"
-                        disabled={loading || (mode === 'forgot' && !!success)}
-                        style={{ display: mode === 'link-telegram' ? 'none' : undefined }}
+                        disabled={loading || (mode === 'forgot' && !!success) || mode === 'presentation-recovery-key'}
+                        style={{ display: mode === 'link-telegram' || mode === 'presentation-recovery-key' ? 'none' : undefined }}
                     >
                         {loading ? (
                             <span className="btn-spinner">⏳</span>
@@ -306,6 +255,89 @@ const LoginPage = () => {
                         )}
                     </button>
                 </form>
+
+                {/* Presentation Recovery Key Modal */}
+                {mode === 'presentation-recovery-key' && (
+                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🚨</div>
+                        <p style={{ color: 'var(--color-danger)', fontWeight: 'bold', marginBottom: '8px' }}>
+                            CRITICAL: Save this Recovery Key
+                        </p>
+                        <p style={{ color: 'var(--color-text)', marginBottom: '16px', fontSize: '0.90rem' }}>
+                            If you lose your password AND this key, your data cannot be recovered by anyone. We do NOT store this key.
+                        </p>
+
+                        <div style={{
+                            background: 'var(--color-bg)',
+                            padding: '16px',
+                            borderRadius: '8px',
+                            fontFamily: 'monospace',
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '1px',
+                            color: 'var(--color-primary)',
+                            marginBottom: '16px',
+                            userSelect: 'all',
+                            wordBreak: 'break-all'
+                        }}>
+                            {recoverySecretToDisplay}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                            <button
+                                type="button"
+                                className="login-btn"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(recoverySecretToDisplay);
+                                    setCopiedKey(true);
+                                    setTimeout(() => setCopiedKey(false), 3000);
+                                }}
+                            >
+                                {copiedKey ? '✅ Copied!' : '📋 Copy to Clipboard'}
+                            </button>
+
+                            {telegramUsername && (
+                                <a
+                                    className="link-btn accent"
+                                    style={{
+                                        background: '#0088cc',
+                                        color: 'white',
+                                        padding: '12px',
+                                        borderRadius: 'var(--radius)',
+                                        fontWeight: 'bold',
+                                        textDecoration: 'none',
+                                        display: 'block',
+                                        textAlign: 'center'
+                                    }}
+                                    href={`https://t.me/share/url?url=&text=${encodeURIComponent("My Weekly Wallet Recovery Key (Keep this safe!):\n\n" + recoverySecretToDisplay)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    ✈️ Save to Telegram (Saved Messages)
+                                </a>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            className="link-btn accent"
+                            onClick={async () => {
+                                // Double check they copied it
+                                if (!confirm("Are you absolutely sure you saved your Recovery Key? Without it, you cannot reset your password.")) {
+                                    return;
+                                }
+                                if (telegramUsername) {
+                                    setMode('link-telegram');
+                                } else {
+                                    await login(email, password);
+                                }
+                            }}
+                            style={{ marginTop: '8px' }}
+                        >
+                            ⚠️ I have securely saved it, continue
+                        </button>
+                    </div>
+                )}
 
                 {/* Telegram Link Prompt — after registration */}
                 {mode === 'link-telegram' && (
@@ -372,13 +404,13 @@ const LoginPage = () => {
                             </button>
                         </p>
                     )}
-                    {(mode === 'forgot' || mode === 'verify-code' || mode === 'reset') && (
+                    {mode === 'forgot' && (
                         <p>
                             Remember your password?{' '}
                             <button
                                 type="button"
                                 className="link-btn accent"
-                                onClick={() => { setMode('login'); setError(''); setSuccess(''); setResetCode(''); }}
+                                onClick={() => { setMode('login'); setError(''); setSuccess(''); setRecoveryKey(''); }}
                             >
                                 Back to Sign In
                             </button>
@@ -391,8 +423,8 @@ const LoginPage = () => {
                     <span>🛡️</span>
                     <span>AES-256-GCM Encrypted • scrypt Hashed</span>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

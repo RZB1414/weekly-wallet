@@ -21,6 +21,7 @@ import {
     wrapKey,
     unwrapKey,
     generateShortCode,
+    generateRecoverySecret,
 } from './crypto.js';
 
 const auth = new Hono();
@@ -49,8 +50,8 @@ async function derivePasswordWrappingKey(password, email) {
     return deriveKey(password, email.toLowerCase(), 'pusheen-wallet-password-wrap');
 }
 
-async function deriveRecoveryWrappingKey(jwtSecret, email) {
-    return deriveKey(jwtSecret, email.toLowerCase(), 'pusheen-wallet-recovery-wrap');
+async function deriveRecoveryWrappingKey(recoverySecret, email) {
+    return deriveKey(recoverySecret, email.toLowerCase(), 'pusheen-wallet-recovery-wrap');
 }
 
 // ──────────────────────────────────────────────
@@ -101,7 +102,8 @@ auth.post('/register', async (c) => {
     // Generate DEK and wrap with password + recovery keys
     const dekBase64 = generateDEK();
     const passwordKey = await derivePasswordWrappingKey(password, email);
-    const recoveryKey = await deriveRecoveryWrappingKey(c.env.JWT_SECRET, email);
+    const recoverySecret = generateRecoverySecret();
+    const recoveryKey = await deriveRecoveryWrappingKey(recoverySecret, email);
 
     const passwordWrappedDEK = await wrapKey(dekBase64, passwordKey);
     const recoveryWrappedDEK = await wrapKey(dekBase64, recoveryKey);
@@ -142,6 +144,7 @@ auth.post('/register', async (c) => {
         success: true,
         token,
         user: { id: userId, email: email.toLowerCase() },
+        recoverySecret, // Returned ONLY ONCE to the user
     });
 });
 
@@ -220,9 +223,8 @@ auth.post('/change-password', async (c) => {
     const newPasswordKey = await derivePasswordWrappingKey(newPassword, email);
     const newPasswordWrappedDEK = await wrapKey(dekBase64, newPasswordKey);
 
-    // Update recovery wrapped DEK too (in case JWT_SECRET changed, keep it fresh)
-    const recoveryKey = await deriveRecoveryWrappingKey(c.env.JWT_SECRET, email);
-    const newRecoveryWrappedDEK = await wrapKey(dekBase64, recoveryKey);
+    // Note: In a true zero-knowledge setup, the server DOES NOT have the recoverySecret here.
+    // Therefore, we CANNOT re-wrap the recoveryWrappedDEK. It must remain exactly as it is.
 
     // Hash new password
     const newPasswordHash = await hashPassword(newPassword);
@@ -230,7 +232,7 @@ auth.post('/change-password', async (c) => {
     // Update user
     user.passwordHash = newPasswordHash;
     user.passwordWrappedDEK = newPasswordWrappedDEK;
-    user.recoveryWrappedDEK = newRecoveryWrappedDEK;
+    // user.recoveryWrappedDEK remains unchanged
     user.updatedAt = new Date().toISOString();
 
     await putUser(bucket, email, user);
@@ -273,40 +275,28 @@ auth.post('/link-telegram', authMiddleware(), async (c) => {
 });
 
 // ──────────────────────────────────────────────
-// POST /api/auth/forgot-password
+// POST /api/auth/send-recovery-key (Protected)
+// Sends the newly generated recovery key to the linked Telegram
 // ──────────────────────────────────────────────
 
-auth.post('/forgot-password', async (c) => {
+auth.post('/send-recovery-key', authMiddleware(), async (c) => {
     const bucket = c.env.WEEKLY_WALLET_BUCKET;
-    const { telegramUsername } = await c.req.json();
+    const email = c.get('email');
+    const { recoverySecret } = await c.req.json();
 
-    const genericResponse = { success: true, message: 'If an account exists, a reset code has been sent via Telegram.' };
-
-    if (!telegramUsername) {
-        return c.json({ error: 'Telegram username is required' }, 400);
+    if (!email || !recoverySecret) {
+        return c.json({ error: 'Missing required fields' }, 400);
     }
 
-    // Look up email from telegram username index
-    const cleanUsername = telegramUsername.replace(/^@/, '').trim().toLowerCase();
-    const indexObj = await bucket.get(`telegram-index/${cleanUsername}.json`);
-    if (!indexObj) {
-        return c.json(genericResponse);
-    }
-
-    const { email } = await indexObj.json();
     const user = await getUser(bucket, email);
     if (!user) {
-        return c.json(genericResponse);
+        return c.json({ error: 'User not found' }, 404);
+    }
+    if (!user.telegramChatId) {
+        return c.json({ error: 'No Telegram account linked yet' }, 400);
     }
 
-    // Generate 6-digit reset code with 1-hour expiry
-    const resetCode = generateShortCode();
-    user.resetToken = resetCode;
-    user.resetTokenExpiry = Date.now() + (60 * 60 * 1000); // 1 hour
-    await putUser(bucket, email, user);
-
-    // Send via Telegram
-    if (user.telegramChatId && c.env.TELEGRAM_BOT_TOKEN) {
+    if (c.env.TELEGRAM_BOT_TOKEN) {
         try {
             const tgResponse = await fetch(
                 `https://api.telegram.org/bot${c.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -315,25 +305,25 @@ auth.post('/forgot-password', async (c) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: user.telegramChatId,
-                        text: `🐱 Weekly Wallet\n\nYour password reset code:\n\n🔑 ${resetCode}\n\nThis code expires in 1 hour.\nIf you didn't request this, ignore this message.`,
+                        text: `🚨 Weekly Wallet Recovery Key 🚨\n\nYour true zero-knowledge recovery key is:\n\n<code>${recoverySecret}</code>\n\nSave this somewhere safe! If you lose your password and this key, your data is gone forever.`,
+                        parse_mode: 'HTML',
                     }),
                 }
             );
 
             if (tgResponse.ok) {
-                console.log('Reset code sent via Telegram to chat:', user.telegramChatId);
+                return c.json({ success: true, message: 'Recovery key sent to Telegram.' });
             } else {
-                const errBody = await tgResponse.text();
-                console.error('Telegram API error:', errBody);
+                console.error('Telegram API error:', await tgResponse.text());
+                return c.json({ error: 'Failed to send to Telegram.' }, 500);
             }
         } catch (err) {
             console.error('Failed to send Telegram message:', err);
+            return c.json({ error: 'Network error communicating with Telegram.' }, 500);
         }
-    } else {
-        console.warn('User has no Telegram linked or TELEGRAM_BOT_TOKEN not configured.');
     }
 
-    return c.json(genericResponse);
+    return c.json({ error: 'Telegram bot not configured on server.' }, 500);
 });
 
 // ──────────────────────────────────────────────
@@ -342,10 +332,10 @@ auth.post('/forgot-password', async (c) => {
 
 auth.post('/reset-password', async (c) => {
     const bucket = c.env.WEEKLY_WALLET_BUCKET;
-    const { email, token, newPassword } = await c.req.json();
+    const { email, recoveryKey: providedRecoverySecret, newPassword } = await c.req.json();
 
-    if (!email || !token || !newPassword) {
-        return c.json({ error: 'Email, token, and new password are required' }, 400);
+    if (!email || !providedRecoverySecret || !newPassword) {
+        return c.json({ error: 'Email, recovery key, and new password are required' }, 400);
     }
 
     const pwError = validatePassword(newPassword);
@@ -354,39 +344,39 @@ auth.post('/reset-password', async (c) => {
     }
 
     const user = await getUser(bucket, email);
-    if (!user || !user.resetToken || user.resetToken !== token) {
-        return c.json({ error: 'Invalid or expired reset token' }, 400);
+    if (!user) {
+        return c.json({ error: 'Invalid email or recovery key' }, 400); // Avoid leaking user existence completely, though we could just say user not found. Let's keep it generic.
     }
 
-    if (Date.now() > user.resetTokenExpiry) {
-        return c.json({ error: 'Reset token has expired. Please request a new one.' }, 400);
+    try {
+        // Attempt to unwrap DEK with the provided recovery key
+        const recoveryKeyObj = await deriveRecoveryWrappingKey(providedRecoverySecret, email);
+        const dekBase64 = await unwrapKey(user.recoveryWrappedDEK, recoveryKeyObj);
+
+        // If we reach here, the recovery key was CORRECT.
+        // Re-wrap DEK with the new password
+        const newPasswordKey = await derivePasswordWrappingKey(newPassword, email);
+        const newPasswordWrappedDEK = await wrapKey(dekBase64, newPasswordKey);
+
+        // Note: we DO NOT re-wrap the recoveryWrappedDEK. It stays the same.
+
+        // Hash new password
+        const newPasswordHash = await hashPassword(newPassword);
+
+        // Update user
+        user.passwordHash = newPasswordHash;
+        user.passwordWrappedDEK = newPasswordWrappedDEK;
+        user.updatedAt = new Date().toISOString();
+
+        await putUser(bucket, email, user);
+
+        return c.json({ success: true, message: 'Password has been reset. You can now log in.' });
+
+    } catch (e) {
+        // Unwrap failed: wrong recovery key
+        console.error('Recovery key unwrap failed:', e);
+        return c.json({ error: 'Invalid recovery key' }, 400);
     }
-
-    // Unwrap DEK with recovery key
-    const recoveryKey = await deriveRecoveryWrappingKey(c.env.JWT_SECRET, email);
-    const dekBase64 = await unwrapKey(user.recoveryWrappedDEK, recoveryKey);
-
-    // Re-wrap DEK with new password
-    const newPasswordKey = await derivePasswordWrappingKey(newPassword, email);
-    const newPasswordWrappedDEK = await wrapKey(dekBase64, newPasswordKey);
-
-    // Re-wrap recovery (refresh)
-    const newRecoveryWrappedDEK = await wrapKey(dekBase64, recoveryKey);
-
-    // Hash new password
-    const newPasswordHash = await hashPassword(newPassword);
-
-    // Update user, clear reset token
-    user.passwordHash = newPasswordHash;
-    user.passwordWrappedDEK = newPasswordWrappedDEK;
-    user.recoveryWrappedDEK = newRecoveryWrappedDEK;
-    user.resetToken = null;
-    user.resetTokenExpiry = null;
-    user.updatedAt = new Date().toISOString();
-
-    await putUser(bucket, email, user);
-
-    return c.json({ success: true, message: 'Password has been reset. You can now log in.' });
 });
 
 export default auth;

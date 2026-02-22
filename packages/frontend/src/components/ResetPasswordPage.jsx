@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { api } from '../lib/api';
 import '../styles/LoginPage.css';
 
-const ResetPasswordPage = ({ email, token, onDone }) => {
+const ResetPasswordPage = ({ email, recoveryKey, onDone }) => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -22,7 +22,7 @@ const ResetPasswordPage = ({ email, token, onDone }) => {
         setLoading(true);
 
         try {
-            const result = await api.auth.resetPassword(email, token, newPassword);
+            const result = await api.auth.resetPassword(email, recoveryKey, newPassword);
             if (result.success) {
                 setSuccess(result.message || 'Password reset! You can now sign in.');
                 // Clear URL params after successful reset

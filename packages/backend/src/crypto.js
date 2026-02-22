@@ -199,7 +199,7 @@ export function generateResetToken() {
 }
 
 // ──────────────────────────────────────────────
-// Short Codes (6-digit numeric)
+// Short Codes & Recovery Secrets
 // ──────────────────────────────────────────────
 
 /**
@@ -210,3 +210,13 @@ export function generateShortCode() {
     const num = ((array[0] << 24) | (array[1] << 16) | (array[2] << 8) | array[3]) >>> 0;
     return String(num % 900000 + 100000); // Always 6 digits: 100000-999999
 }
+
+/**
+ * Generate a secure random Recovery Key for zero-knowledge data recovery.
+ */
+export function generateRecoverySecret() {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `pw-rec-${hex.slice(0, 8)}-${hex.slice(8, 16)}-${hex.slice(16, 24)}-${hex.slice(24)}`;
+}
+

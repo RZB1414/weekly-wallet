@@ -65,27 +65,31 @@ export const api = {
             }
         },
 
-        forgotPassword: async (telegramUsername) => {
+        sendRecoveryKey: async (recoverySecret, tokenOverride) => {
             try {
-                const res = await fetch(`${API_URL}/auth/forgot-password`, {
+                const headers = tokenOverride
+                    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenOverride}` }
+                    : getAuthHeaders();
+
+                const res = await fetch(`${API_URL}/auth/send-recovery-key`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegramUsername }),
+                    headers,
+                    body: JSON.stringify({ recoverySecret }),
                     mode: 'cors',
                 });
                 return await res.json();
             } catch (e) {
-                console.error('Forgot password failed:', e);
+                console.error('Send recovery key failed:', e);
                 return { error: 'Connection error. Please try again.' };
             }
         },
 
-        resetPassword: async (email, token, newPassword) => {
+        resetPassword: async (email, recoveryKey, newPassword) => {
             try {
                 const res = await fetch(`${API_URL}/auth/reset-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, token, newPassword }),
+                    body: JSON.stringify({ email, recoveryKey, newPassword }),
                     mode: 'cors',
                 });
                 return await res.json();
