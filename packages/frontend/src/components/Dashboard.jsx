@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
+import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { formatCurrency, getFinancialInfo, getMonthQuarters } from '../lib/utils';
@@ -11,7 +11,10 @@ import weeklyAvatar from '/chewie.jpg';
 const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, onOpenPlanning, onToggleMenu }) => {
     const { user } = useAuth();
     const [showRunwayInfo, setShowRunwayInfo] = useState(false);
+    const [showRunwayMath, setShowRunwayMath] = useState(false);
     const [chartsReady, setChartsReady] = useState(false);
+    const [isEditingProjection, setIsEditingProjection] = useState(false);
+    const projectionInputRef = useRef(null);
 
     // Defer chart rendering
     useLayoutEffect(() => {
@@ -149,8 +152,10 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
     const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#EC4899', '#8B5CF6', '#6B7280'];
 
-    // ── 4. Realistic Runway Calculation (Hero) ────────────────
-    const [realisticRunway, setRealisticRunway] = useState({ value: 'Calculating...', loading: true, details: '', wealth: 0, daysRunway: '', isSafe: false });
+    // ── 4. Realistic & Optimistic Runway Calculations (Hero) ────────────────
+    const [realisticRunway, setRealisticRunway] = useState({ value: 'Calculating...', loading: true, details: '', wealth: 0, daysRunway: '', isSafe: false, raw: {} });
+    const [optimisticRunway, setOptimisticRunway] = useState({ value: 'Calculating...', loading: true, details: '', wealth: 0, daysRunway: '', isSafe: false, netMonthlyFlow: 0, raw: {} });
+    const [projectionMonths, setProjectionMonths] = useState(() => Number(localStorage.getItem('projectionMonths')) || 12);
 
     useEffect(() => {
         const calculateRunway = async () => {
@@ -214,11 +219,13 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 let isSafe = false;
                 let daysRunwayStr = '';
 
+                // Define burnToUse at a higher scope so it can be passed to state safely
+                const burnToUse = monthlyBurn > 0 ? monthlyBurn : (totalExpenses || 1);
+
                 if (globalNetWorth <= 0) {
                     resultString = '0 Months';
                     detailsString = 'No current wealth. Watch your spending!';
                 } else {
-                    const burnToUse = monthlyBurn > 0 ? monthlyBurn : (totalExpenses || 1);
 
                     if (burnToUse <= 0) {
                         resultString = '∞ Safe';
@@ -240,11 +247,11 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                         // Display the Context underneath
                         if (netMonthlyFlow > 0) {
-                            detailsString = `Wealth growing by ${formatCurrency(netMonthlyFlow)}/mo`;
+                            detailsString = `If zero income, burning ${formatCurrency(burnToUse)}/mo`;
                         } else if (netMonthlyFlow < 0) {
-                            detailsString = `Burning ${formatCurrency(Math.abs(netMonthlyFlow))}/mo`;
+                            detailsString = `Including income, burning ${formatCurrency(Math.abs(netMonthlyFlow))}/mo`;
                         } else {
-                            detailsString = `Stagnant wealth growth`;
+                            detailsString = `Burning ${formatCurrency(burnToUse)}/mo`;
                         }
 
                         // Calculate more accurate days based on burn rate
@@ -256,6 +263,32 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                             daysRunwayStr = `${daysLeft} days`;
                         }
                     }
+                }
+
+                // --- Optimistic Calculation (Financial Momentum) ---
+                let optResultString = '';
+                let optDetailsString = ''; // String used when NOT in safe mode
+                let optIsSafe = false;
+
+                if (netMonthlyFlow > 0) {
+                    optResultString = '∞ Safe';
+                    optDetailsString = ''; // Handled dynamically by JSX input
+                    optIsSafe = true;
+                } else if (netMonthlyFlow === 0) {
+                    optResultString = 'Stagnant';
+                    optDetailsString = `0 growth expected`;
+                    optIsSafe = true;
+                } else {
+                    const monthlyBurnNet = Math.abs(netMonthlyFlow);
+                    const optMonthsLeft = globalNetWorth / monthlyBurnNet;
+                    if (optMonthsLeft >= 12) {
+                        const years = (optMonthsLeft / 12).toFixed(1);
+                        optResultString = `${years} Years`;
+                    } else {
+                        optResultString = `${optMonthsLeft.toFixed(1)} Months`;
+                    }
+                    optDetailsString = `Burning ${formatCurrency(monthlyBurnNet)}/mo`;
+                    optIsSafe = optMonthsLeft >= 3;
                 }
 
                 console.log("[RUNWAY DEBUG] --- Final Results ---");
@@ -270,12 +303,25 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     details: detailsString,
                     wealth: globalNetWorth,
                     daysRunway: daysRunwayStr,
-                    isSafe
+                    isSafe,
+                    raw: { totalIncome, extraIncome, startBalance, totalExpenses, monthlyBurn: burnToUse }
+                });
+
+                setOptimisticRunway({
+                    value: optResultString,
+                    loading: false,
+                    details: optDetailsString,
+                    wealth: globalNetWorth,
+                    netMonthlyFlow, // Pass flow straight to state to render dynamic projections
+                    daysRunway: '', // Usually not helpful for optimistic view
+                    isSafe: optIsSafe,
+                    raw: { monthlyIncome, monthlyBurn: burnToUse, netMonthlyFlow }
                 });
 
             } catch (err) {
                 console.error("Runway calc failed", err);
                 setRealisticRunway({ value: 'Error', loading: false, details: 'Check connection', isSafe: false });
+                setOptimisticRunway({ value: 'Error', loading: false, details: 'Check connection', isSafe: false });
             }
         };
 
@@ -283,6 +329,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
             calculateRunway();
         } else {
             setRealisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
+            setOptimisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
         }
     }, [weeks]);
 
@@ -311,14 +358,14 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
             </header>
 
-            {/* 1. HERO CARD: RUNWAY */}
+            {/* 1. HERO CARDS: RUNWAY & MOMENTUM */}
             <section className="hero-section">
                 <div className={`hero-card ${realisticRunway.isSafe ? 'safe-glow' : 'warning-glow'}`}>
                     <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         <span className="hero-label" style={{ margin: 0 }}>Real Runway</span>
                         <button
                             className="info-icon-btn"
-                            onClick={() => setShowRunwayInfo(true)}
+                            onClick={() => setShowRunwayInfo('strict')}
                             title="How is this calculated?"
                         >
                             ?
@@ -335,6 +382,96 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                             ⏳ ~{realisticRunway.daysRunway} left at avg spend
                         </div>
                     )}
+                </div>
+
+                <div className={`hero-card ${optimisticRunway.isSafe ? 'optimistic-glow' : 'warning-glow'}`}>
+                    <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', position: 'relative', width: '100%', justifyContent: 'center' }}>
+                        <span className="hero-label" style={{ margin: 0 }}>Financial Momentum</span>
+                        <button
+                            className="info-icon-btn"
+                            onClick={() => setShowRunwayInfo('optimistic')}
+                            title="How is this calculated?"
+                        >
+                            ?
+                        </button>
+
+                        {optimisticRunway.value === '∞ Safe' && optimisticRunway.netMonthlyFlow > 0 && (
+                            <button
+                                type="button"
+                                className={`projection-action-btn ${isEditingProjection ? 'saving' : ''}`}
+                                style={{ position: 'absolute', right: 0 }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    if (isEditingProjection) {
+                                        const val = Number(projectionMonths);
+                                        if (val >= 0) localStorage.setItem('projectionMonths', val);
+                                        setIsEditingProjection(false);
+                                    } else {
+                                        setIsEditingProjection(true);
+                                        setTimeout(() => projectionInputRef.current?.focus(), 10);
+                                    }
+                                }}
+                                title={isEditingProjection ? "Save projection months" : "Edit projection months"}
+                                onMouseDown={(e) => e.preventDefault()}
+                            >
+                                {isEditingProjection ? '✓' : '✎'}
+                            </button>
+                        )}
+                    </div>
+                    <div className="hero-value">
+                        {optimisticRunway.loading ? <span className="skeleton-text"></span> : optimisticRunway.value}
+                    </div>
+                    <div className="hero-subtext" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        {optimisticRunway.value === '∞ Safe' && optimisticRunway.netMonthlyFlow > 0 ? (
+                            <>
+                                <span style={{ fontSize: '0.95rem', color: '#4B5563' }}>
+                                    Wealth growing by <strong style={{ color: '#059669' }}>{formatCurrency(optimisticRunway.netMonthlyFlow)}</strong>/mo
+                                </span>
+                                <div className="projection-container">
+                                    <span className="projection-prefix">Projection for</span>
+
+                                    <div className={`projection-editor ${isEditingProjection ? 'editing' : ''}`}>
+                                        {isEditingProjection ? (
+                                            <input
+                                                ref={projectionInputRef}
+                                                type="number"
+                                                min="1"
+                                                max="360"
+                                                value={projectionMonths}
+                                                onChange={(e) => setProjectionMonths(e.target.value)}
+                                                onBlur={() => {
+                                                    const val = Number(projectionMonths);
+                                                    if (val >= 0) localStorage.setItem('projectionMonths', val);
+                                                    setIsEditingProjection(false);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const val = Number(projectionMonths);
+                                                        if (val >= 0) localStorage.setItem('projectionMonths', val);
+                                                        setIsEditingProjection(false);
+                                                    }
+                                                }}
+                                                className="projection-input"
+                                                title="Contract length / Projection months"
+                                            />
+                                        ) : (
+                                            <span style={{ fontWeight: 700, color: '#3B82F6', padding: '0 4px' }}>
+                                                {projectionMonths}
+                                            </span>
+                                        )}
+                                        <span className="projection-suffix">months</span>
+                                    </div>
+
+                                    <span className="projection-result">
+                                        : <strong style={{ color: '#111827' }}>{formatCurrency(optimisticRunway.wealth + (optimisticRunway.netMonthlyFlow * (Number(projectionMonths) || 0)))}</strong>
+                                    </span>
+                                </div>
+                            </>
+                        ) : (
+                            <span>{optimisticRunway.details}</span>
+                        )}
+                    </div>
                 </div>
             </section>
 
@@ -474,31 +611,146 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
             </section>
 
-            {/* 6. RUNWAY EXPLAINER MODAL */}
+            {/* 6. EXPLAINER MODAL */}
             {showRunwayInfo && (
-                <div className="modal-overlay" onClick={() => setShowRunwayInfo(false)}>
+                <div className="modal-overlay info-modal-overlay" onClick={() => { setShowRunwayInfo(false); setShowRunwayMath(false); }}>
                     <div className="modal-content info-modal" onClick={e => e.stopPropagation()}>
-                        <button className="modal-close" onClick={() => setShowRunwayInfo(false)}>×</button>
-                        <h2>How the Runway Works ⏳</h2>
-                        <div className="info-content">
-                            <p>The <strong>Real Runway</strong> indicates how long your money will last if you suddenly lose your main source of income, based on your current lifestyle.</p>
+                        <button className="modal-close" onClick={() => { setShowRunwayInfo(false); setShowRunwayMath(false); }}>×</button>
 
-                            <div className="info-step">
-                                <h3>1. Net Worth calculation</h3>
-                                <p>We sum up all your historical salaries, extra incomes, and your very first initial balance, then subtract everything you've ever spent. This gives us your total available cash pile: <strong>{formatCurrency(realisticRunway.wealth || 0)}</strong>.</p>
-                            </div>
+                        {showRunwayInfo === 'strict' ? (
+                            <>
+                                <h2>{showRunwayMath ? "Real Runway: The Math 🧮" : "How 'Real Runway' Works ⏳"}</h2>
+                                <div className="info-content">
+                                    {!showRunwayMath ? (
+                                        <>
+                                            <p>The <strong>Real Runway</strong> is a strict stress-test: <em>how long could you survive if your income suddenly dropped to zero today?</em></p>
 
-                            <div className="info-step">
-                                <h3>2. Monthly Burn Rate</h3>
-                                <p>We look at your latest Monthly Plan. If your planned expenses are higher than your salary, you are "burning" cash. Your monthly deficit determines how fast your cash pile shrinks.</p>
-                            </div>
+                                            <div className="info-step">
+                                                <h3>1. Total Cash Pile (Net Worth)</h3>
+                                                <p>We sum up every real penny you have — initial starting balance + all historical income + extra credits — minus all historical expenses. This is your war chest.</p>
+                                            </div>
 
-                            <div className="info-step">
-                                <h3>3. The Result</h3>
-                                <p>We divide your Net Worth by your Monthly Burn Rate to show exactly how many <strong>Months</strong> or <strong>Years</strong> you can survive if your income drops to zero.<br />
-                                    If you have more than 3 months of runway built up, you get a <strong>Safe 🟢</strong> badge! Otherwise, a warning indicates you should keep building your savings. 🔴</p>
-                            </div>
-                        </div>
+                                            <div className="info-step">
+                                                <h3>2. Monthly Burn</h3>
+                                                <p>We look at your current Monthly Plan to see your regular scheduled 'spend' categories to determine your standard monthly cost of living.</p>
+                                            </div>
+
+                                            <div className="info-step">
+                                                <h3>3. The Result</h3>
+                                                <p>We divide your Total Cash Pile by your Monthly Burn to tell you exactly how many months you can survive.<br />
+                                                    If you possess at least 3 months of runway, you earn a <strong>Safe 🟢</strong> badge! 🔴 means keep building your emergency fund.</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="math-breakdown" style={{ background: 'rgba(0,0,0,0.03)', padding: '16px', borderRadius: '12px', marginTop: '12px' }}>
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Total Cash Pile (Net Worth)</h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                                                    <span>+ Start Balance:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.startBalance || 0)}</span>
+                                                    <span>+ Total Income:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.totalIncome || 0)}</span>
+                                                    <span>+ Extra Credits:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.extraIncome || 0)}</span>
+                                                    <span style={{ color: '#EF4444' }}>- Total Expenses:</span> <span style={{ textAlign: 'right', color: '#EF4444' }}>{formatCurrency(realisticRunway.raw?.totalExpenses || 0)}</span>
+                                                    <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
+                                                    <strong>= Net Worth:</strong> <strong style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.wealth || 0)}</strong>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Runway Calculation</h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                                                    <span>Net Worth:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.wealth || 0)}</span>
+                                                    <span>÷ Monthly Burn:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.monthlyBurn || 0)}</span>
+                                                    <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
+                                                    <strong>= Runway:</strong> <strong style={{ textAlign: 'right' }}>{realisticRunway.value}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        className="math-info-btn"
+                                        style={{ width: '100%', marginTop: '16px' }}
+                                        onClick={() => setShowRunwayMath(!showRunwayMath)}
+                                    >
+                                        {showRunwayMath ? "↩ Back to explanation" : "Math Info 🧮"}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <h2>{showRunwayMath ? "Financial Momentum: The Math 🧮" : "How 'Financial Momentum' Works 🚀"}</h2>
+                                <div className="info-content">
+                                    {!showRunwayMath ? (
+                                        <>
+                                            <p>The <strong>Financial Momentum</strong> card gives you an optimistic view of the future by assuming you keep your current job.</p>
+
+                                            <div className="info-step">
+                                                <h3>1. Wealth Growing</h3>
+                                                <p>We subtract your <strong>Monthly Burn</strong> from your <strong>Monthly Salary</strong>. If the result is positive, congratulations! Your wealth is growing every month.</p>
+                                            </div>
+
+                                            <div className="info-step">
+                                                <h3>2. Infinite Runway & Projections</h3>
+                                                <p>If your wealth is growing, you technically have an <strong>∞ Safe</strong> runway! We calculate exactly how much money you will have accumulated at the end of a given period.</p>
+                                            </div>
+
+                                            <div className="info-step">
+                                                <h3>3. Custom Contracts</h3>
+                                                <p>If you have a fixed-term contract, simply click the edit pencil icon (✎) on the card to change the standard 12-month projection into your exact remaining contract length.</p>
+                                            </div>
+
+                                            <div className="info-step">
+                                                <h3>4. Deficit Mode</h3>
+                                                <p>If you are spending more than you earn, we tell you how many months until your deficit drains your entire Net Worth.</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="math-breakdown" style={{ background: 'rgba(0,0,0,0.03)', padding: '16px', borderRadius: '12px', marginTop: '12px' }}>
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Net Monthly Flow</h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                                                    <span>+ Monthly Salary:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(optimisticRunway.raw?.monthlyIncome || 0)}</span>
+                                                    <span style={{ color: '#EF4444' }}>- Monthly Burn:</span> <span style={{ textAlign: 'right', color: '#EF4444' }}>{formatCurrency(optimisticRunway.raw?.monthlyBurn || 0)}</span>
+                                                    <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
+                                                    <strong>= Net Flow:</strong> <strong style={{ textAlign: 'right', color: (optimisticRunway.raw?.netMonthlyFlow || 0) >= 0 ? '#059669' : '#EF4444' }}>{formatCurrency(optimisticRunway.raw?.netMonthlyFlow || 0)}</strong>
+                                                </div>
+                                            </div>
+
+                                            {(optimisticRunway.raw?.netMonthlyFlow || 0) > 0 ? (
+                                                <div>
+                                                    <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Future Projection Formula</h3>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                                                        <span>Current Net Worth:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(optimisticRunway.wealth || 0)}</span>
+                                                        <span>+ (Net Flow × Months):</span> <span style={{ textAlign: 'right' }}>{formatCurrency((optimisticRunway.raw?.netMonthlyFlow || 0) * (Number(projectionMonths) || 1))}</span>
+                                                        <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
+                                                        <strong>= Future Wealth:</strong> <strong style={{ textAlign: 'right' }}>{formatCurrency((optimisticRunway.wealth || 0) + ((optimisticRunway.raw?.netMonthlyFlow || 0) * (Number(projectionMonths) || 1)))}</strong>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Deficit Runway</h3>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                                                        <span>Net Worth:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(optimisticRunway.wealth || 0)}</span>
+                                                        <span>÷ Shortfall:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(Math.abs(optimisticRunway.raw?.netMonthlyFlow || 0))}</span>
+                                                        <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
+                                                        <strong>= Runway:</strong> <strong style={{ textAlign: 'right' }}>{optimisticRunway.value}</strong>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        className="math-info-btn"
+                                        style={{ width: '100%', marginTop: '16px' }}
+                                        onClick={() => setShowRunwayMath(!showRunwayMath)}
+                                    >
+                                        {showRunwayMath ? "↩ Back to explanation" : "Math Info 🧮"}
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
                     </div>
                 </div>
             )}

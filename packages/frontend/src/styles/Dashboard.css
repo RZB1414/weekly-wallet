@@ -35,6 +35,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
+    padding: 0;
 }
 
 .greeting-text h1 {
@@ -72,9 +73,12 @@
     object-fit: cover;
 }
 
-/* ── Hero Section (Runway) ─────────────────────── */
+/* ── Hero Section (Runway & Momentum) ─────────────── */
 .hero-section {
-    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .hero-card {
@@ -102,6 +106,20 @@
     background: rgba(255, 251, 235, 0.5);
 }
 
+.hero-card.optimistic-glow {
+    box-shadow: 0 16px 40px -8px rgba(59, 130, 246, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    background: linear-gradient(145deg, rgba(239, 246, 255, 0.85) 0%, rgba(219, 234, 254, 0.4) 100%);
+    backdrop-filter: blur(24px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hero-card.optimistic-glow:hover {
+    box-shadow: 0 20px 48px -8px rgba(59, 130, 246, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.8);
+    border-color: rgba(96, 165, 250, 0.6);
+    transform: translateY(-2px);
+}
+
 .hero-label {
     font-family: var(--font-heading);
     font-size: 0.85rem;
@@ -110,6 +128,28 @@
     color: #6B7280;
     font-weight: 700;
     margin-bottom: 8px;
+}
+
+.info-icon-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4B5563;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-main);
+}
+
+.info-icon-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #111827;
 }
 
 .hero-value {
@@ -156,6 +196,108 @@
     to {
         background-position: -200% 0;
     }
+}
+
+/* ── Hero Projection Editor ────────────────────── */
+.projection-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    margin-top: 4px;
+}
+
+.projection-editor {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    padding: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.projection-editor.editing {
+    background: #fff;
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.projection-input {
+    width: 44px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #3B82F6;
+    padding: 2px 0;
+    border-radius: 4px;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.projection-input:focus {
+    outline: none;
+}
+
+.projection-input::-webkit-outer-spin-button,
+.projection-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.projection-prefix,
+.projection-suffix {
+    font-size: 0.9rem;
+    color: #4B5563;
+    font-weight: 500;
+}
+
+.projection-suffix {
+    margin-right: 4px;
+    margin-left: 2px;
+}
+
+.projection-action-btn {
+    background: transparent;
+    border: none;
+    color: #6B7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.projection-action-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #111827;
+}
+
+.projection-action-btn.saving {
+    color: #10B981;
+    font-weight: 800;
+}
+
+.projection-action-btn.saving:hover {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.projection-result {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #111827;
 }
 
 /* ── Quick Glances ────────────────────────────── */
@@ -389,6 +531,210 @@
     font-style: italic;
     padding: 24px 0;
     font-size: 0.9rem;
+}
+
+/* ── Explainer Modals (How it Works) ────────────────── */
+.info-modal-overlay {
+    align-items: center;
+    /* Override flex-start from AddExpenseModal */
+    padding-top: 0;
+    z-index: 2000;
+}
+
+.info-modal {
+    position: relative;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 32px 24px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(30px);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    margin: auto;
+    font-family: var(--font-body);
+}
+
+.info-modal .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F3F4F6;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: #4B5563;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.info-modal .modal-close:hover {
+    background: #E5E7EB;
+    color: #111827;
+}
+
+.info-modal h2 {
+    font-size: 1.5rem;
+    color: #111827;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 800;
+    font-family: var(--font-display);
+    padding: 0 32px;
+}
+
+.info-content>p {
+    font-size: 1.05rem;
+    color: #4B5563;
+    line-height: 1.5;
+    margin-bottom: 24px;
+    text-align: center;
+    font-family: var(--font-body);
+}
+
+.info-step {
+    background: rgba(243, 244, 246, 0.6);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.info-step:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border-color: rgba(209, 213, 219, 0.8);
+}
+
+.info-step h3 {
+    font-size: 1.05rem;
+    color: #1F2937;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.info-step p {
+    font-size: 0.95rem;
+    color: #4B5563;
+    line-height: 1.5;
+    margin: 0;
+    font-family: var(--font-body);
+}
+
+.math-breakdown {
+    background: linear-gradient(145deg, #F9FAFB 0%, #F3F4F6 100%) !important;
+    border: 1px solid #E5E7EB;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.math-breakdown h3 {
+    color: #374151 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem !important;
+    font-weight: 700;
+    font-family: var(--font-body);
+}
+
+.math-info-btn {
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+    border: 1px solid #FFD54F;
+    color: #D84315;
+    padding: 14px 24px;
+    border-radius: 999px;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.15);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.math-info-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(255, 152, 0, 0.2);
+    background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%);
+}
+
+.math-info-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(255, 152, 0, 0.1);
+}
+
+/* ── Responsive Adjustments ──────────────────────── */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .hero-section {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-value {
+        font-size: 3rem;
+    }
+
+    .quick-glance-section {
+        grid-template-columns: 1fr;
+    }
+
+    .charts-and-lists {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-actions-footer {
+        flex-direction: row;
+        padding: 12px 16px;
+        border-radius: 24px 24px 0 0;
+        bottom: 0;
+        width: 95%;
+        gap: 8px;
+        justify-content: space-between;
+    }
+
+    .secondary-actions {
+        width: auto;
+        flex: 2;
+        /* 2 parts of the width to hold 2 buttons */
+        gap: 8px;
+    }
+
+    .secondary-actions button {
+        flex: 1;
+        /* Each takes 1 part of the 2 */
+        padding: 10px 0;
+    }
+
+    .fab-main {
+        width: auto;
+        flex: 1;
+        /* Takes 1 part out of 3 total */
+        justify-content: center;
+        padding: 12px 4px;
+        font-size: 0.85rem;
+        /* Slightly smaller to fit "Add Expense" */
+        white-space: nowrap;
+    }
+
+    .dashboard-container {
+        padding-bottom: 140px;
+    }
 }
 
 /* ── Chart Specifics ──────────────────────────── */
