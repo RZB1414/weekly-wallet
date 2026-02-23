@@ -49,9 +49,9 @@ export function AuthProvider({ children }) {
         setUser(null);
     };
 
-    const changePassword = async (oldPassword, newPassword) => {
+    const changePassword = async (oldPassword, newPassword, recoveryKey) => {
         if (!user) return { error: 'Not logged in' };
-        const result = await api.auth.changePassword(user.email, oldPassword, newPassword);
+        const result = await api.auth.changePassword(user.email, oldPassword, newPassword, recoveryKey);
         if (result.success && result.token) {
             localStorage.setItem('pw_token', result.token);
             setUser(prev => ({ ...prev, token: result.token }));

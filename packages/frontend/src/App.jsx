@@ -41,6 +41,7 @@ const App = () => {
     const [oldPwd, setOldPwd] = useState('');
     const [newPwd, setNewPwd] = useState('');
     const [confirmPwd, setConfirmPwd] = useState('');
+    const [recoveryKey, setRecoveryKey] = useState('');
     const [changePwdError, setChangePwdError] = useState('');
     const [changePwdSuccess, setChangePwdSuccess] = useState('');
     const [changePwdLoading, setChangePwdLoading] = useState(false);
@@ -55,8 +56,13 @@ const App = () => {
             return;
         }
 
+        if (!recoveryKey) {
+            setChangePwdError('Recovery Key is required to verify ownership');
+            return;
+        }
+
         setChangePwdLoading(true);
-        const result = await changePassword(oldPwd, newPwd);
+        const result = await changePassword(oldPwd, newPwd, recoveryKey);
         setChangePwdLoading(false);
 
         if (result.success) {
@@ -66,6 +72,7 @@ const App = () => {
                 setOldPwd('');
                 setNewPwd('');
                 setConfirmPwd('');
+                setRecoveryKey('');
                 setChangePwdSuccess('');
             }, 1500);
         } else {
@@ -73,28 +80,6 @@ const App = () => {
         }
     };
 
-    // ── Telegram Linking ───────────────────────────
-    const [showTelegramLink, setShowTelegramLink] = useState(false);
-    const [telegramCode, setTelegramCode] = useState('');
-    const [telegramLoading, setTelegramLoading] = useState(false);
-
-    const handleLinkTelegram = async () => {
-        setTelegramLoading(true);
-        try {
-            const result = await api.auth.linkTelegram();
-            if (result.success) {
-                setTelegramCode(result.code);
-                setShowTelegramLink(true);
-            } else {
-                alert(result.error || 'Failed to generate code');
-            }
-        } catch (err) {
-            alert('Connection error');
-        } finally {
-            setTelegramLoading(false);
-            setShowUserMenu(false);
-        }
-    };
 
     // ── App State ─────────────────────────────────
     const [currentView, setCurrentViewRaw] = useState('dashboard'); // 'dashboard' | 'weeks'
@@ -374,7 +359,7 @@ const App = () => {
 
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, [currentView, isAddExpenseModalOpen, isMonthlyPlanningOpen, showChangePwd, showTelegramLink, showUserMenu, showUserGuide]);
+    }, [currentView, isAddExpenseModalOpen, isMonthlyPlanningOpen, showChangePwd, showUserMenu, showUserGuide]);
 
     const handleOpenAddExpense = () => {
         setIsAddExpenseModalOpen(true);
@@ -436,9 +421,6 @@ const App = () => {
                         <div className="user-menu-divider" />
                         <button className="user-menu-item" onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}>
                             🔑 Change Password
-                        </button>
-                        <button className="user-menu-item" onClick={handleLinkTelegram} disabled={telegramLoading}>
-                            {telegramLoading ? '⏳ Generating...' : '📱 Link Telegram'}
                         </button>
                         <button className="user-menu-item" onClick={() => { setShowUserGuide(true); setShowUserMenu(false); }}>
                             ❓ Help
@@ -650,6 +632,22 @@ const App = () => {
                                     autoComplete="new-password"
                                 />
                             </div>
+                            {/* Removed extra padding here, keeping structure */}
+                            <div className="form-group">
+                                <label htmlFor="recovery-key">Recovery Key</label>
+                                <input
+                                    id="recovery-key"
+                                    type="text"
+                                    value={recoveryKey}
+                                    onChange={(e) => setRecoveryKey(e.target.value)}
+                                    placeholder="pw-rec-..."
+                                    required
+                                    autoComplete="off"
+                                />
+                                <small style={{ color: 'var(--color-text-muted)', display: 'block', marginTop: '4px' }}>
+                                    Required to prove ownership mathematically.
+                                </small>
+                            </div>
                             {changePwdError && <div className="auth-error">{changePwdError}</div>}
                             {changePwdSuccess && <div className="auth-success">{changePwdSuccess}</div>}
                             <div className="change-pwd-actions">
@@ -661,6 +659,7 @@ const App = () => {
                                         setOldPwd('');
                                         setNewPwd('');
                                         setConfirmPwd('');
+                                        setRecoveryKey('');
                                         setChangePwdError('');
                                     }}
                                 >
@@ -680,44 +679,6 @@ const App = () => {
             )}
 
             {/* User Guide */}
-            <UserGuide isOpen={showUserGuide} onClose={() => setShowUserGuide(false)} />
-
-            {/* Telegram Link Modal */}
-            {showTelegramLink && (
-                <div className="change-pwd-overlay" onClick={(e) => {
-                    if (e.target === e.currentTarget) setShowTelegramLink(false);
-                }}>
-                    <div className="change-pwd-card" style={{ textAlign: 'center' }}>
-                        <h2>📱 Link Telegram</h2>
-                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>
-                            Send this code to <strong>@WeeklyWalletBot</strong> on Telegram:
-                        </p>
-                        <div style={{
-                            fontSize: '2rem',
-                            fontWeight: 'bold',
-                            letterSpacing: '8px',
-                            padding: '20px',
-                            background: 'rgba(255, 140, 0, 0.15)',
-                            borderRadius: '16px',
-                            color: 'var(--color-primary)',
-                            marginBottom: '20px',
-                            fontFamily: 'monospace',
-                        }}>
-                            {telegramCode}
-                        </div>
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', opacity: 0.7 }}>
-                            This code expires in 10 minutes.
-                        </p>
-                        <button
-                            className="btn-save"
-                            onClick={() => setShowTelegramLink(false)}
-                            style={{ marginTop: '15px', width: '100%' }}
-                        >
-                            Done
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

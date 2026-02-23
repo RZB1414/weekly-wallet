@@ -28,6 +28,7 @@ export function authMiddleware() {
             // Set user info on context
             c.set('userId', payload.sub);
             c.set('email', payload.email);
+            if (payload.dek) c.set('tokenWrappedDEK', payload.dek);
         } catch (err) {
             return c.json({ error: 'Invalid token. Please log in again.' }, 401);
         }

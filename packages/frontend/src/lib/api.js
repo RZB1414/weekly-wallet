@@ -20,12 +20,12 @@ function getAuthHeaders() {
 export const api = {
     // ── Auth ──────────────────────────────────
     auth: {
-        register: async (email, password, telegramUsername) => {
+        register: async (email, password) => {
             try {
                 const res = await fetch(`${API_URL}/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, telegramUsername }),
+                    body: JSON.stringify({ email, password }),
                     mode: 'cors',
                 });
                 return await res.json();
@@ -50,36 +50,17 @@ export const api = {
             }
         },
 
-        changePassword: async (email, oldPassword, newPassword) => {
+        changePassword: async (email, oldPassword, newPassword, recoveryKey) => {
             try {
                 const res = await fetch(`${API_URL}/auth/change-password`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ email, oldPassword, newPassword }),
+                    body: JSON.stringify({ email, oldPassword, newPassword, recoveryKey }),
                     mode: 'cors',
                 });
                 return await res.json();
             } catch (e) {
                 console.error('Change password failed:', e);
-                return { error: 'Connection error. Please try again.' };
-            }
-        },
-
-        sendRecoveryKey: async (recoverySecret, tokenOverride) => {
-            try {
-                const headers = tokenOverride
-                    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenOverride}` }
-                    : getAuthHeaders();
-
-                const res = await fetch(`${API_URL}/auth/send-recovery-key`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ recoverySecret }),
-                    mode: 'cors',
-                });
-                return await res.json();
-            } catch (e) {
-                console.error('Send recovery key failed:', e);
                 return { error: 'Connection error. Please try again.' };
             }
         },
@@ -95,20 +76,6 @@ export const api = {
                 return await res.json();
             } catch (e) {
                 console.error('Reset password failed:', e);
-                return { error: 'Connection error. Please try again.' };
-            }
-        },
-
-        linkTelegram: async () => {
-            try {
-                const res = await fetch(`${API_URL}/auth/link-telegram`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    mode: 'cors',
-                });
-                return await res.json();
-            } catch (e) {
-                console.error('Link telegram failed:', e);
                 return { error: 'Connection error. Please try again.' };
             }
         },

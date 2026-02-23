@@ -33,26 +33,13 @@ const LoginPage = () => {
                     setLoading(false);
                     return;
                 }
-                if (telegramUsername) {
-                    // Register WITHOUT auto-login so we can show link-telegram screen or recovery key
-                    const result = await api.auth.register(email, password, telegramUsername);
-                    if (result.error) {
-                        setError(result.error);
-                    } else {
-                        // Registration success. User MUST save the recovery key.
-                        setTempToken(result.token);
-                        setRecoverySecretToDisplay(result.recoverySecret);
-                        setMode('presentation-recovery-key');
-                    }
+                const result = await api.auth.register(email, password);
+                if (result.error) {
+                    setError(result.error);
                 } else {
-                    const result = await api.auth.register(email, password);
-                    if (result.error) {
-                        setError(result.error);
-                    } else {
-                        setTempToken(result.token);
-                        setRecoverySecretToDisplay(result.recoverySecret);
-                        setMode('presentation-recovery-key');
-                    }
+                    setTempToken(result.token);
+                    setRecoverySecretToDisplay(result.recoverySecret);
+                    setMode('presentation-recovery-key');
                 }
             } else if (mode === 'login') {
                 const result = await login(email, password);
@@ -174,20 +161,6 @@ const LoginPage = () => {
                                     autoComplete="new-password"
                                 />
                             </div>
-                            <div className="form-group">
-                                <label htmlFor="telegramUsername">Telegram Username <span style={{ opacity: 0.5, fontWeight: 'normal' }}>(optional)</span></label>
-                                <input
-                                    id="telegramUsername"
-                                    type="text"
-                                    value={telegramUsername}
-                                    onChange={(e) => setTelegramUsername(e.target.value)}
-                                    placeholder="@your_username"
-                                    autoComplete="off"
-                                />
-                                <small style={{ color: 'var(--color-text-muted)', opacity: 0.6, fontSize: '0.75rem' }}>
-                                    Used for password recovery via @WeeklyWalletBot
-                                </small>
-                            </div>
                         </>
                     )}
 
@@ -295,27 +268,6 @@ const LoginPage = () => {
                             >
                                 {copiedKey ? '✅ Copied!' : '📋 Copy to Clipboard'}
                             </button>
-
-                            {telegramUsername && (
-                                <a
-                                    className="link-btn accent"
-                                    style={{
-                                        background: '#0088cc',
-                                        color: 'white',
-                                        padding: '12px',
-                                        borderRadius: 'var(--radius)',
-                                        fontWeight: 'bold',
-                                        textDecoration: 'none',
-                                        display: 'block',
-                                        textAlign: 'center'
-                                    }}
-                                    href={`https://t.me/share/url?url=&text=${encodeURIComponent("My Weekly Wallet Recovery Key (Keep this safe!):\n\n" + recoverySecretToDisplay)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    ✈️ Save to Telegram (Saved Messages)
-                                </a>
-                            )}
                         </div>
 
                         <button
@@ -326,44 +278,11 @@ const LoginPage = () => {
                                 if (!confirm("Are you absolutely sure you saved your Recovery Key? Without it, you cannot reset your password.")) {
                                     return;
                                 }
-                                if (telegramUsername) {
-                                    setMode('link-telegram');
-                                } else {
-                                    await login(email, password);
-                                }
-                            }}
-                            style={{ marginTop: '8px' }}
-                        >
-                            ⚠️ I have securely saved it, continue
-                        </button>
-                    </div>
-                )}
-
-                {/* Telegram Link Prompt — after registration */}
-                {mode === 'link-telegram' && (
-                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📱</div>
-                        <p style={{ color: 'var(--color-text)', marginBottom: '16px', fontSize: '0.95rem' }}>
-                            Open the bot on Telegram and click <strong>START</strong> to link your account automatically.
-                        </p>
-                        <a
-                            href="https://t.me/WeeklyWalletBot?start=link"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="login-btn"
-                            style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginBottom: '12px' }}
-                        >
-                            📱 Open @WeeklyWalletBot
-                        </a>
-                        <button
-                            type="button"
-                            className="link-btn accent"
-                            onClick={async () => {
                                 await login(email, password);
                             }}
                             style={{ marginTop: '8px' }}
                         >
-                            ✅ Done, continue to app
+                            ⚠️ I have securely saved it, continue
                         </button>
                     </div>
                 )}

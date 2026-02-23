@@ -1,48 +1,25 @@
-import React, { useMemo, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useLayoutEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
-import { formatCurrency, formatDate, getFinancialInfo, getMonthQuarters, calculateRemaining } from '../lib/utils';
+import { formatCurrency, getFinancialInfo, getMonthQuarters } from '../lib/utils';
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-    LineChart, Line, CartesianGrid, Legend,
-    PieChart, Pie
+    PieChart, Pie, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import '../styles/Dashboard.css';
 import weeklyAvatar from '/chewie.jpg';
-import explosionImg from '/explosion.png'; // Direct import if in public/src or reference as string if in public
 
 const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, onOpenPlanning, onToggleMenu }) => {
     const { user } = useAuth();
-    const [showRunway, setShowRunway] = useState(false);
-    const [barTooltipActive, setBarTooltipActive] = useState(false);
-    const [trendTooltipActive, setTrendTooltipActive] = useState(false);
-    const [trendView, setTrendView] = useState('weekly'); // 'weekly' | 'monthly'
-    const barChartRef = useRef(null);
-    const trendChartRef = useRef(null);
+    const [showRunwayInfo, setShowRunwayInfo] = useState(false);
     const [chartsReady, setChartsReady] = useState(false);
 
-    // Defer chart rendering until after initial layout to prevent ResponsiveContainer
-    // from measuring before the DOM has settled (which causes width=-1 errors).
+    // Defer chart rendering
     useLayoutEffect(() => {
         const frame = requestAnimationFrame(() => setChartsReady(true));
         return () => cancelAnimationFrame(frame);
     }, []);
 
-    // Dismiss charts tooltip on outside click
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (barChartRef.current && !barChartRef.current.contains(e.target)) {
-                setBarTooltipActive(false);
-            }
-            if (trendChartRef.current && !trendChartRef.current.contains(e.target)) {
-                setTrendTooltipActive(false);
-            }
-        };
-        document.addEventListener('click', handleClickOutside, true);
-        return () => document.removeEventListener('click', handleClickOutside, true);
-    }, []);
-
-    // ── 1. KPI Calculations ─────────────────────────────
+    // ── 1. KPI & Budget Calculations ─────────────────────────────
 
     // Current Week Data
     const currentWeekData = useMemo(() => {
@@ -51,7 +28,6 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         const { quarter } = getFinancialInfo(now);
         const currentWeek = weeks.find(w => w.id === quarter.id);
 
-        // Calculate Weekly Budget based on Frequency
         const weeklyBudget = categories.reduce((sum, cat) => {
             if (cat.frequency === 'weekly') {
                 return sum + (cat.budget || 0);
@@ -72,73 +48,23 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         };
     }, [weeks, categories]);
 
-    // Cash Runway
-    const cashRunway = useMemo(() => {
-        if (!currentWeekData) return '∞';
-        const remaining = currentWeekData.balance;
-        if (remaining <= 0) return '0 Days';
-
-        const now = new Date();
-        const daysPassed = now.getDay() + 1;
-        const avgDailySpend = currentWeekData.spent / daysPassed;
-
-        if (avgDailySpend <= 0) return 'Safe';
-
-        const daysLeft = Math.floor(remaining / avgDailySpend);
-        return `${daysLeft} Days`;
-    }, [currentWeekData]);
-
-
-    // ── 2. Chart Data Preparation ───────────────────────
-
-    // Current month's quarter weeks (properly matched)
-    const currentMonthWeeks = useMemo(() => {
+    // Current Month Data
+    const currentMonthData = useMemo(() => {
         const now = new Date();
         const { year, month } = getFinancialInfo(now);
         const quarters = getMonthQuarters(year, month);
 
-        return quarters.map(q => {
+        const currentMonthWeeks = quarters.map(q => {
             const existing = weeks.find(w => w.id === q.id);
-            return existing || { id: q.id, startDate: q.start, endDate: q.end, expenses: [] };
+            return existing || { id: q.id, expenses: [] };
         });
-    }, [weeks]);
 
-    // Bar Chart
-    const barChartData = useMemo(() => {
-        if (!currentMonthWeeks) return [];
-
-        const weeklyBudget = categories.reduce((sum, cat) => {
-            if (cat.frequency === 'weekly') {
+        const monthlyBudget = categories.reduce((sum, cat) => {
+            if (cat.frequency === 'monthly') {
                 return sum + (cat.budget || 0);
             }
-            return sum + ((cat.budget || 0) / 4);
+            return sum + ((cat.budget || 0) * 4);
         }, 0);
-
-        return currentMonthWeeks.map((week, index) => {
-            const spent = week.expenses
-                .filter(e => e.type !== 'credit')
-                .reduce((sum, e) => sum + Number(e.amount), 0);
-
-            // Warm/Happy Theme Colors
-            let fill = '#34D399'; // Emerald (Safe)
-            if (spent > weeklyBudget) fill = '#F87171'; // Red (Over)
-            else if (spent > weeklyBudget * 0.8) fill = '#FBBF24'; // Amber (Caution)
-
-            return {
-                name: `W${index + 1}`,
-                Budget: weeklyBudget,
-                Actual: spent,
-                fill
-            };
-        });
-    }, [currentMonthWeeks, categories]);
-
-    // Monthly Budget Remaining %
-    const monthlyRemainingPct = useMemo(() => {
-        if (!currentMonthWeeks || currentMonthWeeks.length === 0) return null;
-
-        const monthlyBudget = categories.reduce((sum, cat) => sum + (cat.budget || 0), 0);
-        if (monthlyBudget <= 0) return null;
 
         const totalSpent = currentMonthWeeks.reduce((total, week) => {
             return total + week.expenses
@@ -146,90 +72,54 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 .reduce((sum, e) => sum + Number(e.amount), 0);
         }, 0);
 
-        const remaining = Math.max(0, monthlyBudget - totalSpent);
-        return Math.round((remaining / monthlyBudget) * 100);
-    }, [currentMonthWeeks, categories]);
+        return {
+            budget: monthlyBudget,
+            spent: totalSpent,
+            balance: monthlyBudget - totalSpent,
+            weeks: currentMonthWeeks
+        };
+    }, [weeks, categories]);
 
-    // Trend Data
-    const trendData = useMemo(() => {
-        if (trendView === 'weekly') {
-            const weeklyBudget = categories.reduce((sum, cat) => {
-                if (cat.frequency === 'weekly') {
-                    return sum + (cat.budget || 0);
-                }
-                return sum + ((cat.budget || 0) / 4);
-            }, 0);
-            let cumulativeActual = 0;
-            let cumulativeIdeal = 0;
+    // Progress Calculation
+    const getProgressInfo = (spent, budget) => {
+        if (budget <= 0) return { percent: 0, color: '#34D399' }; // Default safe
+        const pct = Math.min((spent / budget) * 100, 100);
+        let color = '#34D399'; // Emerald
+        if (pct >= 100) color = '#EF4444'; // Red
+        else if (pct >= 80) color = '#F59E0B'; // Amber
+        return { percent: pct, color };
+    };
 
-            return currentMonthWeeks.map((week, index) => {
-                const spent = week.expenses
-                    .filter(e => e.type !== 'credit')
-                    .reduce((sum, e) => sum + Number(e.amount), 0);
+    const weeklyProgress = getProgressInfo(currentWeekData?.spent || 0, currentWeekData?.budget || 0);
+    const monthlyProgress = getProgressInfo(currentMonthData?.spent || 0, currentMonthData?.budget || 0);
 
-                cumulativeActual += spent;
-                cumulativeIdeal += weeklyBudget;
-
-                return {
-                    name: `W${index + 1}`,
-                    Ideal: cumulativeIdeal,
-                    Actual: cumulativeActual
-                };
+    // ── 2. Recent Transactions ─────────────────────────
+    const recentTransactions = useMemo(() => {
+        const allExpenses = [];
+        // Flatten expenses from all weeks, sort by date
+        weeks.forEach(week => {
+            week.expenses.forEach(e => {
+                allExpenses.push({ ...e, weekId: week.id });
             });
-        } else {
-            // Monthly View
-            // 1. Calculate Monthly Budget Ideal
-            const monthlyBudget = categories.reduce((sum, cat) => {
-                if (cat.frequency === 'monthly') {
-                    return sum + (cat.budget || 0);
-                }
-                return sum + ((cat.budget || 0) * 4);
-            }, 0);
+        });
 
-            // 2. Group weeks by month
-            const monthsMap = new Map(); // "YYYY-MM" -> { spent: 0, order: timestamp }
+        allExpenses.sort((a, b) => {
+            // Sort by date desc, then by creation id if possible
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) return dateB - dateA;
+            // Fallback
+            return (b.id || "").localeCompare(a.id || "");
+        });
 
-            weeks.forEach(week => {
-                const date = new Date(week.startDate);
-                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        return allExpenses.slice(0, 5); // top 5
+    }, [weeks]);
 
-                if (!monthsMap.has(key)) {
-                    monthsMap.set(key, { spent: 0, timestamp: date.getTime(), label: date.toLocaleString('en-US', { month: 'short' }) });
-                }
-
-                const spent = week.expenses
-                    .filter(e => e.type !== 'credit')
-                    .reduce((sum, e) => sum + Number(e.amount), 0);
-
-                const entry = monthsMap.get(key);
-                entry.spent += spent;
-            });
-
-            // 3. Convert to array and sort
-            const sortedMonths = Array.from(monthsMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-
-            // 4. Generate Cumulative Data
-            let cumulativeActual = 0;
-            let cumulativeIdeal = 0;
-
-            return sortedMonths.map(m => {
-                cumulativeActual += m.spent;
-                cumulativeIdeal += monthlyBudget;
-
-                return {
-                    name: m.label,
-                    Ideal: cumulativeIdeal,
-                    Actual: cumulativeActual
-                };
-            });
-        }
-    }, [currentMonthWeeks, weeks, categories, trendView]);
-
-    // Donut Data
+    // ── 3. Donut Data ──────────────────────────────
     const donutData = useMemo(() => {
         const catMap = {};
         let total = 0;
-        currentMonthWeeks.forEach(week => {
+        currentMonthData.weeks.forEach(week => {
             week.expenses.forEach(e => {
                 if (e.type === 'credit') return;
                 const amount = Number(e.amount);
@@ -255,34 +145,25 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
         top5.push({ name: 'Others', value: othersValue, percent: othersPercent });
         return top5;
-    }, [currentMonthWeeks]);
+    }, [currentMonthData]);
 
-    // Happy & Warm Palette
     const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#EC4899', '#8B5CF6', '#6B7280'];
 
-
-
-    // ── 3. Realistic Runway Calculation ────────────────
-    const [realisticRunway, setRealisticRunway] = useState({ value: '?', loading: false, details: '', wealth: 0, daysRunway: '' });
+    // ── 4. Realistic Runway Calculation (Hero) ────────────────
+    const [realisticRunway, setRealisticRunway] = useState({ value: 'Calculating...', loading: true, details: '', wealth: 0, daysRunway: '', isSafe: false });
 
     useEffect(() => {
-        if (!showRunway) return;
-
         const calculateRunway = async () => {
             setRealisticRunway(prev => ({ ...prev, loading: true }));
             try {
-                // 1. Fetch ALL Monthly Plans (to get Salary History)
                 const plansList = await api.getMonthlyPlannings();
 
                 const allPlansData = plansList.plans ? await Promise.all(
                     plansList.plans.map(p => api.getMonthlyPlanning(p.year, p.month))
                 ) : [];
 
-                // 2. Calculate Total Historical Income (Sum of Salary)
                 const totalIncome = allPlansData.reduce((sum, plan) => sum + (plan.salary || 0), 0);
 
-                // 3. Calculate Total Historical Spent & Initial Balance
-                // Ensure weeks are sorted to get the true Initial Balance of the very first week
                 const sortedWeeks = [...weeks].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
                 const startBalance = sortedWeeks.length > 0 ? (sortedWeeks[0].initialBalance || 0) : 0;
 
@@ -298,15 +179,18 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     }, 0);
                 }, 0);
 
-                // Current Net Worth
-                // Income (Salaries) + Extra Credits + Initial Balance - Expenses
                 const globalNetWorth = totalIncome + extraIncome + startBalance - totalExpenses;
 
-                // 4. Future Projection
-                // Find latest plan for burn rate
-                const latestPlanRef = plansList.plans && plansList.plans.length > 0 ? plansList.plans[0] : null;
+                console.log("[RUNWAY DEBUG] --- Base Values ---");
+                console.log("Total Income (Salaries from Plans):", totalIncome);
+                console.log("Extra Income (Credits):", extraIncome);
+                console.log("Start Balance:", startBalance);
+                console.log("Total Expenses:", totalExpenses);
+                console.log("=> Global Net Worth:", globalNetWorth);
+
                 let monthlyBurn = 0;
                 let monthlyIncome = 0;
+                const latestPlanRef = plansList.plans && plansList.plans.length > 0 ? plansList.plans[0] : null;
 
                 if (latestPlanRef) {
                     const latestData = await api.getMonthlyPlanning(latestPlanRef.year, latestPlanRef.month);
@@ -314,70 +198,105 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     monthlyBurn = latestData.categories.reduce((sum, c) => sum + (c.type === 'spend' ? c.budget : 0), 0);
                 }
 
-                // If no plan, use reasonable defaults
                 if (monthlyBurn === 0 && currentWeekData) {
                     monthlyBurn = currentWeekData.spent * 4;
                 }
 
-                // Net Monthly Flow
                 const netMonthlyFlow = monthlyIncome - monthlyBurn;
 
-                // Calculation
+                console.log("[RUNWAY DEBUG] --- Monthly Flow ---");
+                console.log("Monthly Income (Latest Plan Salary):", monthlyIncome);
+                console.log("Monthly Burn (Planned Spend Categories or 4x Week):", monthlyBurn);
+                console.log("=> Net Monthly Flow:", netMonthlyFlow);
+
                 let resultString = '';
                 let detailsString = '';
+                let isSafe = false;
+                let daysRunwayStr = '';
 
                 if (globalNetWorth <= 0) {
                     resultString = '0 Months';
-                    detailsString = 'No current wealth';
-                } else if (netMonthlyFlow >= 0) {
-                    resultString = '∞ Safe';
-                    detailsString = `Growing by ${formatCurrency(netMonthlyFlow)}/mo`;
+                    detailsString = 'No current wealth. Watch your spending!';
                 } else {
-                    const monthlyBurnNet = Math.abs(netMonthlyFlow);
+                    const burnToUse = monthlyBurn > 0 ? monthlyBurn : (totalExpenses || 1);
 
-                    const monthsLeft = globalNetWorth / monthlyBurnNet;
-
-                    if (monthsLeft > 12) {
-                        const years = (monthsLeft / 12).toFixed(1);
-                        resultString = `${years} Years`;
+                    if (burnToUse <= 0) {
+                        resultString = '∞ Safe';
+                        detailsString = 'No expenses recorded yet';
+                        isSafe = true;
                     } else {
-                        resultString = `${monthsLeft.toFixed(1)} Months`;
+                        const monthsLeft = globalNetWorth / burnToUse;
+
+                        if (monthsLeft >= 12) {
+                            const years = (monthsLeft / 12).toFixed(1);
+                            resultString = `${years} Years`;
+                        } else {
+                            // If it's very small show decimal, else normal
+                            resultString = `${monthsLeft.toFixed(1)} Months`;
+                        }
+
+                        // We consider it "Safe" if you have at least 3 months of runway built up
+                        isSafe = monthsLeft >= 3;
+
+                        // Display the Context underneath
+                        if (netMonthlyFlow > 0) {
+                            detailsString = `Wealth growing by ${formatCurrency(netMonthlyFlow)}/mo`;
+                        } else if (netMonthlyFlow < 0) {
+                            detailsString = `Burning ${formatCurrency(Math.abs(netMonthlyFlow))}/mo`;
+                        } else {
+                            detailsString = `Stagnant wealth growth`;
+                        }
+
+                        // Calculate more accurate days based on burn rate
+                        const dailyBurn = burnToUse / 30.416; // Average days in month
+                        const daysLeft = Math.floor(globalNetWorth / dailyBurn);
+
+                        // Only show the prominent days label if runway is less than 3 months
+                        if (daysLeft < 90) {
+                            daysRunwayStr = `${daysLeft} days`;
+                        }
                     }
-                    detailsString = `Burning ${formatCurrency(monthlyBurnNet)}/mo`;
                 }
 
-                // 5. Days Runway based on average daily spend
-                let daysRunwayStr = '';
-                if (globalNetWorth > 0 && totalExpenses > 0) {
-                    // Calculate total days tracked
-                    const firstDate = new Date(sortedWeeks[0].startDate);
-                    const lastWeek = sortedWeeks[sortedWeeks.length - 1];
-                    const lastDate = lastWeek.endDate ? new Date(lastWeek.endDate) : new Date();
-                    const totalDaysTracked = Math.max(1, Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)));
-                    const avgDailySpend = totalExpenses / totalDaysTracked;
-
-                    if (avgDailySpend > 0) {
-                        const daysLeft = Math.floor(globalNetWorth / avgDailySpend);
-                        daysRunwayStr = `${daysLeft} days`;
-                    }
-                }
+                console.log("[RUNWAY DEBUG] --- Final Results ---");
+                console.log("Result String:", resultString);
+                console.log("Details String:", detailsString);
+                console.log("Days Runway:", daysRunwayStr);
+                console.log("-----------------------------------");
 
                 setRealisticRunway({
                     value: resultString,
                     loading: false,
                     details: detailsString,
                     wealth: globalNetWorth,
-                    daysRunway: daysRunwayStr
+                    daysRunway: daysRunwayStr,
+                    isSafe
                 });
 
             } catch (err) {
                 console.error("Runway calc failed", err);
-                setRealisticRunway({ value: 'Error', loading: false, details: 'Check connection' });
+                setRealisticRunway({ value: 'Error', loading: false, details: 'Check connection', isSafe: false });
             }
         };
 
-        calculateRunway();
-    }, [showRunway, weeks]);
+        if (weeks.length > 0) {
+            calculateRunway();
+        } else {
+            setRealisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
+        }
+    }, [weeks]);
+
+    // Format relative time (e.g. "Today", "Yesterday", "Oct 12")
+    const formatExpenseDate = (dateString) => {
+        const date = new Date(dateString);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (date.toDateString() === today.toDateString()) return 'Today';
+        if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
 
 
     return (
@@ -392,152 +311,120 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
             </header>
 
-            <section className="kpi-section" style={{ gridTemplateColumns: '1fr' }}>
-                <div className="kpi-card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-                    <span className="kpi-label">Weekly Balance</span>
-                    <span className={`kpi-value ${currentWeekData?.balance >= 0 ? 'positive' : 'negative'}`}>
-                        {formatCurrency(currentWeekData?.balance || 0)}
+            {/* 1. HERO CARD: RUNWAY */}
+            <section className="hero-section">
+                <div className={`hero-card ${realisticRunway.isSafe ? 'safe-glow' : 'warning-glow'}`}>
+                    <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <span className="hero-label" style={{ margin: 0 }}>Real Runway</span>
+                        <button
+                            className="info-icon-btn"
+                            onClick={() => setShowRunwayInfo(true)}
+                            title="How is this calculated?"
+                        >
+                            ?
+                        </button>
+                    </div>
+                    <div className="hero-value">
+                        {realisticRunway.loading ? <span className="skeleton-text"></span> : realisticRunway.value}
+                    </div>
+                    <span className="hero-subtext">
+                        {realisticRunway.details}
                     </span>
-                    <span className="kpi-subtext">Left to spend</span>
+                    {realisticRunway.daysRunway && !realisticRunway.isSafe && (
+                        <div className="hero-badge">
+                            ⏳ ~{realisticRunway.daysRunway} left at avg spend
+                        </div>
+                    )}
                 </div>
             </section>
 
-            <section className="charts-section">
-                <div className="chart-card wide">
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        Weekly Goals
-                        {monthlyRemainingPct !== null && (
-                            <span style={{
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                padding: '3px 10px',
-                                borderRadius: '999px',
-                                background: monthlyRemainingPct >= 50
-                                    ? 'rgba(16, 185, 129, 0.12)'
-                                    : monthlyRemainingPct >= 20
-                                        ? 'rgba(251, 191, 36, 0.15)'
-                                        : 'rgba(248, 113, 113, 0.15)',
-                                color: monthlyRemainingPct >= 50
-                                    ? '#059669'
-                                    : monthlyRemainingPct >= 20
-                                        ? '#D97706'
-                                        : '#DC2626',
-                                letterSpacing: '-0.01em',
-                            }}>
-                                {new Date().toLocaleString('en-US', { month: 'short' })} -  {monthlyRemainingPct}% left
-                            </span>
-                        )}
-                    </h3>
-                    <div ref={barChartRef} style={{ width: '100%', minWidth: 1, height: 280, minHeight: 1, position: 'relative', overflow: 'hidden' }} onClick={() => setBarTooltipActive(true)}>
-                        {chartsReady && (
-                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                                <BarChart key={barChartData.map(d => d.Actual).join(',')} data={barChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                    <XAxis
-                                        dataKey="name"
-                                        tick={{ fill: '#6B7280', fontSize: 12, fontFamily: 'Inter' }}
-                                        axisLine={false}
-                                        tickLine={false}
-                                    />
-                                    <YAxis
-                                        hide
-                                    />
-                                    <Tooltip
-                                        active={barTooltipActive ? undefined : false}
-                                        cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                        formatter={(value) => formatCurrency(value)}
-                                    />
-                                    <Bar dataKey="Actual" radius={[6, 6, 6, 6]} barSize={40}>
-                                        {barChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        )}
-                    </div>
+            {/* 2. QUICK GLANCES */}
+            <section className="quick-glance-section">
+                <div className="glance-card">
+                    <span className="glance-label">Weekly Balance</span>
+                    <span className={`glance-value ${currentWeekData?.balance >= 0 ? 'positive' : 'negative'}`}>
+                        {formatCurrency(currentWeekData?.balance || 0)}
+                    </span>
+                    <span className="glance-subtext">Left to spend</span>
                 </div>
+                <div className="glance-card">
+                    <span className="glance-label">Monthly Spend</span>
+                    <span className="glance-value neutral">
+                        {formatCurrency(currentMonthData?.spent || 0)}
+                    </span>
+                    <span className="glance-subtext">Of {formatCurrency(currentMonthData?.budget || 0)}</span>
+                </div>
+            </section>
 
-                <div className="chart-card">
+            {/* 3. BUDGET PROGRESS BARS */}
+            <section className="progress-section">
+                <div className="glass-card">
+                    <h3>Budget Progress</h3>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                        <h3 style={{ margin: 0 }}>Trend</h3>
-                        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', borderRadius: '99px', padding: '2px' }}>
-                            {['weekly', 'monthly'].map(view => (
-                                <button
-                                    key={view}
-                                    onClick={() => setTrendView(view)}
-                                    style={{
-                                        background: trendView === view ? '#fff' : 'transparent',
-                                        border: 'none',
-                                        borderRadius: '99px',
-                                        padding: '4px 12px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        color: trendView === view ? '#F59E0B' : '#6B7280',
-                                        boxShadow: trendView === view ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                                        cursor: 'pointer',
-                                        textTransform: 'capitalize'
-                                    }}
-                                >
-                                    {view}
-                                </button>
-                            ))}
+                    <div className="progress-item">
+                        <div className="progress-header">
+                            <span className="progress-title">This Week</span>
+                            <span className="progress-stats">{formatCurrency(currentWeekData?.spent || 0)} / {formatCurrency(currentWeekData?.budget || 0)}</span>
+                        </div>
+                        <div className="progress-bar-bg">
+                            <div className="progress-bar-fill" style={{ width: `${weeklyProgress.percent}%`, backgroundColor: weeklyProgress.color }}></div>
                         </div>
                     </div>
-                    <div ref={trendChartRef} style={{ width: '100%', minWidth: 1, height: 250, minHeight: 1, position: 'relative', overflow: 'hidden' }} onClick={() => setTrendTooltipActive(true)}>
-                        {chartsReady && (
-                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                                <LineChart data={trendData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                                    <XAxis
-                                        dataKey="name"
-                                        tick={{ fill: '#6B7280', fontSize: 12, fontFamily: 'Inter' }}
-                                        axisLine={false}
-                                        tickLine={false}
-                                    />
-                                    <YAxis hide />
-                                    <Tooltip
-                                        active={trendTooltipActive ? undefined : false}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                        formatter={(value) => formatCurrency(value)}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="Ideal"
-                                        stroke="#CBD5E1"
-                                        strokeDasharray="5 5"
-                                        strokeWidth={2}
-                                        dot={false}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="Actual"
-                                        stroke="#F59E0B"
-                                        strokeWidth={3}
-                                        dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                                        activeDot={{ r: 6, strokeWidth: 0 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+
+                    <div className="progress-item">
+                        <div className="progress-header">
+                            <span className="progress-title">This Month</span>
+                            <span className="progress-stats">{formatCurrency(currentMonthData?.spent || 0)} / {formatCurrency(currentMonthData?.budget || 0)}</span>
+                        </div>
+                        <div className="progress-bar-bg">
+                            <div className="progress-bar-fill" style={{ width: `${monthlyProgress.percent}%`, backgroundColor: monthlyProgress.color }}></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="charts-and-lists">
+                {/* 4. RECENT TRANSACTIONS */}
+                <div className="glass-card recent-tx-card">
+                    <div className="card-header">
+                        <h3>Recent Transactions</h3>
+                        <button className="text-btn" onClick={() => onNavigate('weeks')}>See All</button>
+                    </div>
+                    <div className="tx-list">
+                        {recentTransactions.length > 0 ? (
+                            recentTransactions.map((tx, idx) => (
+                                <div key={tx.id || idx} className="tx-item">
+                                    <div className={`tx-icon ${tx.type === 'credit' ? 'credit' : 'expense'}`}>
+                                        {tx.type === 'credit' ? '+' : '-'}
+                                    </div>
+                                    <div className="tx-details">
+                                        <span className="tx-name">{tx.name || tx.category}</span>
+                                        <span className="tx-date">{formatExpenseDate(tx.date)} &bull; {tx.category}</span>
+                                    </div>
+                                    <div className={`tx-amount ${tx.type === 'credit' ? 'positive' : ''}`}>
+                                        {tx.type === 'credit' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="empty-state">No transactions yet.</div>
                         )}
                     </div>
                 </div>
 
-                <div className="chart-card">
-                    <h3>Categories</h3>
-                    <div style={{ width: '100%', minWidth: 1, height: 220, minHeight: 1, position: 'relative', overflow: 'hidden' }}>
-                        {chartsReady && (
+                {/* 5. DONUT CHART */}
+                <div className="glass-card chart-card">
+                    <h3>Where it goes</h3>
+                    <div style={{ width: '100%', minWidth: 1, height: 200, minHeight: 1, position: 'relative', overflow: 'hidden' }}>
+                        {chartsReady && donutData.length > 0 ? (
                             <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
                                 <PieChart>
                                     <Pie
                                         data={donutData}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
+                                        innerRadius={55}
+                                        outerRadius={75}
                                         paddingAngle={5}
                                         dataKey="value"
                                         stroke="none"
@@ -552,51 +439,30 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
+                        ) : (
+                            <div className="empty-state" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No expenses this month</div>
                         )}
                     </div>
 
                     {/* Custom Legend */}
-                    <div className="custom-legend">
-                        {donutData.map((entry, index) => (
-                            <div key={`legend-${index}`} className="legend-item">
-                                <div className="legend-color" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                <span className="legend-label">{entry.name}</span>
-                                <span className="legend-value">
-                                    {formatCurrency(entry.value)}
-                                    <span style={{ fontSize: '0.85em', color: '#9CA3AF', marginLeft: '6px', fontWeight: 500 }}>
-                                        ({entry.percent.toFixed(0)}%)
+                    {donutData.length > 0 && (
+                        <div className="custom-legend">
+                            {donutData.map((entry, index) => (
+                                <div key={`legend-${index}`} className="legend-item">
+                                    <div className="legend-color" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                    <span className="legend-label">{entry.name}</span>
+                                    <span className="legend-value">
+                                        {formatCurrency(entry.value)}
+                                        <span style={{ fontSize: '0.85em', color: '#9CA3AF', marginLeft: '6px', fontWeight: 500 }}>
+                                            ({entry.percent.toFixed(0)}%)
+                                        </span>
                                     </span>
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </section>
-
-            {/* Hidden Runway Section at Bottom */}
-            {showRunway && (
-                <div style={{ marginTop: '40px', marginBottom: '80px', animation: 'fadeIn 0.5s ease' }}>
-                    <div className="kpi-card warning-glow">
-                        <span className="kpi-label">Real Runway</span>
-                        <span className="kpi-value warning" style={{ fontSize: '1.8rem' }}>
-                            {realisticRunway.loading ? 'Calculating...' : realisticRunway.value}
-                        </span>
-                        <span className="kpi-subtext">
-                            {realisticRunway.details || "Based on total wealth & future flow"}
-                        </span>
-                        {realisticRunway.wealth > 0 && (
-                            <div style={{ fontSize: '0.8rem', marginTop: '5px', opacity: 0.8 }}>
-                                Net Wealth combined: {formatCurrency(realisticRunway.wealth)}
-                            </div>
-                        )}
-                        {realisticRunway.daysRunway && (
-                            <div style={{ fontSize: '0.85rem', marginTop: '8px', padding: '6px 12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', fontWeight: 600 }}>
-                                ⏳ ~{realisticRunway.daysRunway} at current avg spending
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
 
             <section className="quick-actions-footer">
                 <button className="fab-main" onClick={onAddExpense}>
@@ -608,14 +474,35 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
             </section>
 
-            {/* Explosion Trigger */}
-            <div
-                className="explosion-trigger"
-                onClick={() => setShowRunway(!showRunway)}
-                title="Reveal Runway"
-            >
-                <img src="/explosion.png" alt="Explosion" />
-            </div>
+            {/* 6. RUNWAY EXPLAINER MODAL */}
+            {showRunwayInfo && (
+                <div className="modal-overlay" onClick={() => setShowRunwayInfo(false)}>
+                    <div className="modal-content info-modal" onClick={e => e.stopPropagation()}>
+                        <button className="modal-close" onClick={() => setShowRunwayInfo(false)}>×</button>
+                        <h2>How the Runway Works ⏳</h2>
+                        <div className="info-content">
+                            <p>The <strong>Real Runway</strong> indicates how long your money will last if you suddenly lose your main source of income, based on your current lifestyle.</p>
+
+                            <div className="info-step">
+                                <h3>1. Net Worth calculation</h3>
+                                <p>We sum up all your historical salaries, extra incomes, and your very first initial balance, then subtract everything you've ever spent. This gives us your total available cash pile: <strong>{formatCurrency(realisticRunway.wealth || 0)}</strong>.</p>
+                            </div>
+
+                            <div className="info-step">
+                                <h3>2. Monthly Burn Rate</h3>
+                                <p>We look at your latest Monthly Plan. If your planned expenses are higher than your salary, you are "burning" cash. Your monthly deficit determines how fast your cash pile shrinks.</p>
+                            </div>
+
+                            <div className="info-step">
+                                <h3>3. The Result</h3>
+                                <p>We divide your Net Worth by your Monthly Burn Rate to show exactly how many <strong>Months</strong> or <strong>Years</strong> you can survive if your income drops to zero.<br />
+                                    If you have more than 3 months of runway built up, you get a <strong>Safe 🟢</strong> badge! Otherwise, a warning indicates you should keep building your savings. 🔴</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

@@ -40,22 +40,20 @@ app.use('/api/monthly-plannings', authMiddleware())
 // Helper: get user's DEK for encryption/decryption
 // ──────────────────────────────────────────────
 async function getUserDEK(c) {
-  const email = c.get('email')
-  const bucket = c.env.WEEKLY_WALLET_BUCKET
+  const tokenWrappedDEK = c.get('tokenWrappedDEK')
+  if (!tokenWrappedDEK) {
+    throw new Error('No Data Encryption Key present in session token')
+  }
 
-  // Read user record to get passwordWrappedDEK
-  const userObj = await bucket.get(`users/${email}.json`)
-  if (!userObj) throw new Error('User record not found')
-  const user = await userObj.json()
-
-  // We use the recovery key (server-side) to unwrap DEK for data operations
-  // This avoids needing the user's password on every API call
-  const recoveryKey = await deriveKey(
-    c.env.JWT_SECRET,
-    email,
-    'pusheen-wallet-recovery-wrap'
+  // Unwrap the stateless session DEK using the server's internal wrapping key
+  const serverSecret = c.env.JWT_SECRET
+  const tokenWrappingKey = await deriveKey(
+    serverSecret,
+    'server-internal-salt',
+    'pusheen-wallet-token-wrap'
   )
-  const dekBase64 = await unwrapKey(user.recoveryWrappedDEK, recoveryKey)
+
+  const dekBase64 = await unwrapKey(tokenWrappedDEK, tokenWrappingKey)
   return importDEK(dekBase64)
 }
 
