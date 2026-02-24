@@ -425,21 +425,24 @@ const App = () => {
                     <div className="user-menu-backdrop" onClick={() => setShowUserMenu(false)} />
                     <div className="user-menu-dropdown">
                         <div className="user-menu-header">
-                            <div className="user-menu-avatar">🐱</div>
                             <div className="user-menu-email">{user.email}</div>
                         </div>
                         <div className="user-menu-divider" />
                         <button className="user-menu-item" onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}>
-                            🔑 Change Password
+                            <span className="menu-icon">🔑</span>
+                            <span className="menu-label">Change Password</span>
                         </button>
                         <button className="user-menu-item" onClick={() => { setShowUserGuide(true); setShowUserMenu(false); }}>
-                            ❓ Help
+                            <span className="menu-icon">❓</span>
+                            <span className="menu-label">Help</span>
                         </button>
                         <button className="user-menu-item" onClick={() => { setShowAvatarGallery(true); setShowUserMenu(false); }}>
-                            🖼️ Edit Avatar
+                            <span className="menu-icon">🖼️</span>
+                            <span className="menu-label">Edit Avatar</span>
                         </button>
                         <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
-                            🚪 Logout
+                            <span className="menu-icon">🚪</span>
+                            <span className="menu-label">Logout</span>
                         </button>
                     </div>
                 </>

@@ -182,6 +182,28 @@ app.get('/api/monthly-plannings', async (c) => {
 })
 
 // ──────────────────────────────────────────────
+// GET /api/user/profile
+// ──────────────────────────────────────────────
+app.get('/api/user/profile', async (c) => {
+  const email = c.get('email')
+  const bucket = c.env.WEEKLY_WALLET_BUCKET
+
+  try {
+    const key = `users/${email.toLowerCase()}.json`
+    const obj = await bucket.get(key)
+    if (!obj) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
+    const user = await obj.json()
+    return c.json({ id: user.id, email: user.email, avatar: user.avatar || '/no-avatar.jpg' })
+  } catch (err) {
+    console.error('Error reading profile:', err)
+    return c.json({ error: 'Failed to read profile' }, 500)
+  }
+})
+
+// ──────────────────────────────────────────────
 // POST /api/user/profile
 // ──────────────────────────────────────────────
 app.post('/api/user/profile', async (c) => {

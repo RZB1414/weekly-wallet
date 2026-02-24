@@ -158,7 +158,11 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     // ── 4. Realistic & Optimistic Runway Calculations (Hero) ────────────────
     const [realisticRunway, setRealisticRunway] = useState({ value: 'Calculating...', loading: true, details: '', wealth: 0, daysRunway: '', isSafe: false, raw: {} });
     const [optimisticRunway, setOptimisticRunway] = useState({ value: 'Calculating...', loading: true, details: '', wealth: 0, daysRunway: '', isSafe: false, netMonthlyFlow: 0, raw: {} });
-    const [projectionMonths, setProjectionMonths] = useState(() => Number(localStorage.getItem('projectionMonths')) || 12);
+    const [projectionMonths, setProjectionMonths] = useState(() => {
+        // Prefer user profile value from R2, fallback to localStorage
+        if (user?.projectionMonths) return Number(user.projectionMonths);
+        return Number(localStorage.getItem('projectionMonths')) || 12;
+    });
 
     useEffect(() => {
         const calculateRunway = async () => {
@@ -378,7 +382,10 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                     e.preventDefault();
                                     if (isEditingProjection) {
                                         const val = Number(projectionMonths);
-                                        if (val >= 0) localStorage.setItem('projectionMonths', val);
+                                        if (val >= 0) {
+                                            localStorage.setItem('projectionMonths', val);
+                                            api.updateProfile({ projectionMonths: val });
+                                        }
                                         setIsEditingProjection(false);
                                     } else {
                                         setIsEditingProjection(true);
@@ -415,13 +422,19 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                                 onChange={(e) => setProjectionMonths(e.target.value)}
                                                 onBlur={() => {
                                                     const val = Number(projectionMonths);
-                                                    if (val >= 0) localStorage.setItem('projectionMonths', val);
+                                                    if (val >= 0) {
+                                                        localStorage.setItem('projectionMonths', val);
+                                                        api.updateProfile({ projectionMonths: val });
+                                                    }
                                                     setIsEditingProjection(false);
                                                 }}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         const val = Number(projectionMonths);
-                                                        if (val >= 0) localStorage.setItem('projectionMonths', val);
+                                                        if (val >= 0) {
+                                                            localStorage.setItem('projectionMonths', val);
+                                                            api.updateProfile({ projectionMonths: val });
+                                                        }
                                                         setIsEditingProjection(false);
                                                     }
                                                 }}

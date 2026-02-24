@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // On mount, check localStorage for saved session
+    // On mount, check localStorage for saved session, then sync from backend
     useEffect(() => {
         const savedToken = localStorage.getItem('pw_token');
         const savedUser = localStorage.getItem('pw_user');
@@ -15,6 +15,20 @@ export function AuthProvider({ children }) {
             try {
                 const parsed = JSON.parse(savedUser);
                 setUser({ ...parsed, token: savedToken });
+
+                // Fetch latest profile from backend to sync avatar across devices
+                api.getProfile().then(profile => {
+                    if (profile && !profile.error && profile.avatar) {
+                        setUser(prev => {
+                            if (!prev || prev.avatar === profile.avatar) return prev;
+                            const updated = { ...prev, avatar: profile.avatar };
+                            const stored = JSON.parse(localStorage.getItem('pw_user') || '{}');
+                            stored.avatar = profile.avatar;
+                            localStorage.setItem('pw_user', JSON.stringify(stored));
+                            return updated;
+                        });
+                    }
+                });
             } catch {
                 localStorage.removeItem('pw_token');
                 localStorage.removeItem('pw_user');

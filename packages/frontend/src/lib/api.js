@@ -82,6 +82,26 @@ export const api = {
     },
 
     // ── User Profile ──────────────────────────
+    getProfile: async () => {
+        try {
+            const res = await fetch(`${API_URL}/user/profile`, {
+                headers: getAuthHeaders(),
+                mode: 'cors',
+            });
+            if (res.status === 401) {
+                localStorage.removeItem('pw_token');
+                localStorage.removeItem('pw_user');
+                window.location.reload();
+                return null;
+            }
+            if (!res.ok) return null;
+            return await res.json();
+        } catch (e) {
+            console.error('Failed to fetch profile', e);
+            return null;
+        }
+    },
+
     updateProfile: async (data) => {
         try {
             const res = await fetch(`${API_URL}/user/profile`, {

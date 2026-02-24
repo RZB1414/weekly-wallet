@@ -380,36 +380,51 @@
     transform: scale(0.95);
 }
 
-/* ── User Menu Dropdown ─────────────────────── */
+/* ── User Menu Dropdown (Glassmorphism) ─────── */
 
 .user-menu-backdrop {
     position: fixed;
     inset: 0;
     z-index: 149;
+    background: rgba(0, 0, 0, 0.08);
 }
 
 .user-menu-dropdown {
     position: fixed;
     top: 68px;
     right: 16px;
-    width: 260px;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: var(--happy-border);
-    border-radius: 18px;
-    padding: 16px;
+    width: 270px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 20px;
+    padding: 18px;
     box-shadow:
-        0 10px 40px rgba(74, 44, 0, 0.12),
-        0 2px 6px rgba(0, 0, 0, 0.04);
+        0 8px 32px rgba(0, 0, 0, 0.18),
+        0 1.5px 4px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
     z-index: 200;
-    animation: menuSlideIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    animation: menuSlideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    overflow: hidden;
+}
+
+/* Subtle warm glow accent at the top */
+.user-menu-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 180, 70, 0.7), transparent);
+    border-radius: 2px;
 }
 
 @keyframes menuSlideIn {
     from {
         opacity: 0;
-        transform: translateY(-10px) scale(0.95);
+        transform: translateY(-12px) scale(0.92);
     }
 
     to {
@@ -421,63 +436,119 @@
 .user-menu-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding-bottom: 12px;
+    gap: 12px;
+    padding-bottom: 14px;
 }
 
 .user-menu-avatar {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--color-primary), #FFB347);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(255, 140, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
 .user-menu-email {
     font-size: 0.82rem;
-    color: var(--color-text-primary);
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
     word-break: break-all;
     line-height: 1.3;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .user-menu-divider {
     height: 1px;
-    background: rgba(255, 140, 0, 0.12);
-    margin-bottom: 8px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    margin-bottom: 10px;
 }
 
 .user-menu-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     width: 100%;
     padding: 10px 12px;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     background: transparent;
     font-family: var(--font-display);
-    font-size: 0.88rem;
-    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.92);
     cursor: pointer;
     text-align: left;
-    transition: background 0.15s;
+    transition: background 0.25s, transform 0.2s, box-shadow 0.25s;
 }
 
 .user-menu-item:hover {
-    background: rgba(255, 140, 0, 0.08);
+    background: rgba(255, 255, 255, 0.13);
+    transform: translateX(4px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
+.user-menu-item:hover .menu-icon {
+    transform: scale(1.15);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.user-menu-item:hover .menu-label {
+    color: #fff;
+}
+
+.user-menu-item:active {
+    transform: translateX(2px) scale(0.97);
+}
+
+/* ── Menu Icon (frosted circle) ──────────────── */
+
+.menu-icon {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: transform 0.2s, background 0.25s;
+}
+
+/* ── Menu Label ──────────────────────────────── */
+
+.menu-label {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    transition: color 0.2s;
+}
+
+/* ── Logout Variant ──────────────────────────── */
+
 .user-menu-item.logout {
-    color: var(--color-text-alert);
+    color: #ff6b6b;
+}
+
+.user-menu-item.logout .menu-icon {
+    background: rgba(255, 68, 68, 0.12);
+    border-color: rgba(255, 68, 68, 0.2);
 }
 
 .user-menu-item.logout:hover {
-    background: rgba(255, 68, 68, 0.08);
+    background: rgba(255, 68, 68, 0.15);
+    box-shadow: inset 0 0 0 1px rgba(255, 68, 68, 0.18);
+}
+
+.user-menu-item.logout:hover .menu-icon {
+    background: rgba(255, 68, 68, 0.25);
+    transform: scale(1.15);
 }
 
 /* ── Responsive ─────────────────────────────── */

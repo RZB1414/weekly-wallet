@@ -190,7 +190,7 @@ auth.post('/login', async (c) => {
     return c.json({
         success: true,
         token,
-        user: { id: user.id, email: user.email, avatar: user.avatar || '/no-avatar.jpg' },
+        user: { id: user.id, email: user.email, avatar: user.avatar || '/no-avatar.jpg', projectionMonths: user.projectionMonths || 12 },
     });
 });
 
