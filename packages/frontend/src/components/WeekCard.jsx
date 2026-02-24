@@ -77,24 +77,22 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
     return (
         <div className={`week-card ${status.toLowerCase()}`}>
             <div className="card-header">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <h3 className="week-title">
-                            {week.startDate && week.endDate
-                                ? `${formatDate(week.startDate).slice(0, 5)} - ${formatDate(week.endDate).slice(0, 5)}`
-                                : getWeekRange(week.startDate)
-                            }
-                        </h3>
-                        {weekNumber && totalWeeks && (
-                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                                Week {weekNumber}/{totalWeeks}
-                            </span>
-                        )}
-                        <span className={`week-status ${status.toLowerCase()}`}>{status}</span>
-                    </div>
+                <div className="header-info">
+                    <h3 className="week-title">
+                        {week.startDate && week.endDate
+                            ? `${formatDate(week.startDate).slice(0, 5)} - ${formatDate(week.endDate).slice(0, 5)}`
+                            : getWeekRange(week.startDate)
+                        }
+                    </h3>
+                    {weekNumber && totalWeeks && (
+                        <span className="week-number">
+                            Week {weekNumber}/{totalWeeks}
+                        </span>
+                    )}
+                    <span className={`week-status ${status.toLowerCase()}`}>{status}</span>
                 </div>
 
-                <div className="header-actions">
+                <div className="header-actions-weekcard">
                     {/* View Tabs */}
                     <div className="view-tabs">
                         <button

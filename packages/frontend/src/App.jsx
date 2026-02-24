@@ -340,10 +340,7 @@ const App = () => {
                 setShowUserGuide(false);
                 return;
             }
-            if (showTelegramLink) {
-                setShowTelegramLink(false);
-                return;
-            }
+
             if (showChangePwd) {
                 setShowChangePwd(false);
                 return;
