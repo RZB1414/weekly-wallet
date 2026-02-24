@@ -31,27 +31,98 @@
 
 /* ── Header ────────────────────────────────────── */
 .dashboard-header {
+    position: relative;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     margin-bottom: 24px;
     padding: 0;
+    border-radius: 28px;
+    overflow: hidden;
+    min-height: 180px;
+    box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.25);
+}
+
+.dashboard-header-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center 30%;
+    z-index: 0;
+}
+
+.dashboard-header-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.7) 0%,
+            rgba(0, 0, 0, 0.3) 50%,
+            rgba(0, 0, 0, 0.05) 100%);
+    z-index: 1;
+}
+
+.header-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    padding: 24px;
+}
+
+.header-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-menu-btn {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.header-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
 }
 
 .greeting-text h1 {
     font-family: var(--font-heading);
-    font-size: 2rem;
+    font-size: 1rem;
     font-weight: 700;
-    color: #111827;
+    color: #fff;
     margin: 0;
     letter-spacing: -0.03em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .greeting-text p {
-    margin: 4px 0 0;
-    color: #6B7280;
-    font-size: 0.95rem;
+    margin: 2px 0 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.55rem;
     font-weight: 500;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .weekly-avatar {
@@ -828,6 +899,199 @@
 .secondary-actions {
     display: flex;
     gap: 4px;
+}
+
+/* ── Avatar Zoom & Gallery ────────────────────── */
+.avatar-zoom-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.avatar-zoom-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+.avatar-zoom-image {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 32px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    object-fit: contain;
+}
+
+.avatar-zoom-close {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    color: #4B5563;
+    z-index: 10;
+}
+
+.edit-avatar-icon {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: #3B82F6;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-avatar-icon:hover {
+    transform: scale(1.1);
+}
+
+.avatar-gallery-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.avatar-gallery-content {
+    background: #fff;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.avatar-gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.avatar-gallery-header h2 {
+    margin: 0;
+    font-family: var(--font-heading);
+}
+
+.avatar-gallery-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #9CA3AF;
+}
+
+.avatar-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 16px;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.avatar-gallery-item {
+    position: relative;
+    border-radius: 16px;
+    cursor: pointer;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    aspect-ratio: 1;
+}
+
+.avatar-gallery-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-gallery-item.selected {
+    border-color: #3B82F6;
+}
+
+.avatar-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-selected-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: #3B82F6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.avatar-saving-state {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #10B981;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-weight: bold;
+    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.4);
+    pointer-events: none;
+    z-index: 10;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* ── Responsive ───────────────────────────────── */

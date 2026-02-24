@@ -143,7 +143,7 @@ auth.post('/register', async (c) => {
     return c.json({
         success: true,
         token,
-        user: { id: userId, email: email.toLowerCase() },
+        user: { id: userId, email: email.toLowerCase(), avatar: '/no-avatar.jpg' },
         recoverySecret, // Returned ONLY ONCE to the user
     });
 });
@@ -190,7 +190,7 @@ auth.post('/login', async (c) => {
     return c.json({
         success: true,
         token,
-        user: { id: user.id, email: user.email },
+        user: { id: user.id, email: user.email, avatar: user.avatar || '/no-avatar.jpg' },
     });
 });
 

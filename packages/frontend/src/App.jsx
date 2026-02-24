@@ -14,13 +14,23 @@ import Dashboard from './components/Dashboard';
 import UserGuide from './components/UserGuide';
 
 const App = () => {
-    const { user, loading: authLoading, logout, changePassword } = useAuth();
+    const { user, loading: authLoading, logout, changePassword, updateAvatar } = useAuth();
 
     // ── User Menu Dropdown ────────────────────────
     const [showUserMenu, setShowUserMenu] = useState(false);
 
     // ── User Guide ────────────────────────────────
     const [showUserGuide, setShowUserGuide] = useState(false);
+
+    // ── Avatar Gallery ──────────────────────────────
+    const [showAvatarGallery, setShowAvatarGallery] = useState(false);
+    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+
+    const AVAILABLE_AVATARS = [
+        '/art-colector.jpg', '/bezos.jpg', '/gangsta.jpg', '/investor.jpg', '/jujuba.jpg',
+        '/king.jpg', '/madam.jpg', '/model.jpg', '/old-money.jpg',
+        '/steve.jpg', '/wall-stret.jpg', '/no-avatar.jpg'
+    ];
 
     // ── Password Reset via URL ────────────────────
     const [resetMode, setResetMode] = useState(false);
@@ -425,11 +435,45 @@ const App = () => {
                         <button className="user-menu-item" onClick={() => { setShowUserGuide(true); setShowUserMenu(false); }}>
                             ❓ Help
                         </button>
+                        <button className="user-menu-item" onClick={() => { setShowAvatarGallery(true); setShowUserMenu(false); }}>
+                            🖼️ Edit Avatar
+                        </button>
                         <button className="user-menu-item logout" onClick={() => { logout(); setShowUserMenu(false); }}>
                             🚪 Logout
                         </button>
                     </div>
                 </>
+            )}
+
+            {/* Avatar Gallery Modal */}
+            {showAvatarGallery && (
+                <div className="avatar-gallery-overlay" onClick={() => setShowAvatarGallery(false)}>
+                    <div className="avatar-gallery-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="avatar-gallery-header">
+                            <h2>Select Avatar</h2>
+                            <button className="avatar-gallery-close" onClick={() => setShowAvatarGallery(false)}>×</button>
+                        </div>
+                        <div className="avatar-gallery-grid">
+                            {AVAILABLE_AVATARS.map((avatarUrl, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`avatar-gallery-item ${user?.avatar === avatarUrl ? 'selected' : ''}`}
+                                    onClick={async () => {
+                                        if (isUpdatingAvatar) return;
+                                        setIsUpdatingAvatar(true);
+                                        await updateAvatar(avatarUrl);
+                                        setIsUpdatingAvatar(false);
+                                        setShowAvatarGallery(false);
+                                    }}
+                                >
+                                    <img src={avatarUrl} alt={`Avatar ${idx}`} loading="lazy" />
+                                    {user?.avatar === avatarUrl && <div className="avatar-selected-badge">✓</div>}
+                                </div>
+                            ))}
+                        </div>
+                        {isUpdatingAvatar && <div className="avatar-saving-state">Saving...</div>}
+                    </div>
+                </div>
             )}
 
             {currentView === 'dashboard' ? (

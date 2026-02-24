@@ -81,6 +81,29 @@ export const api = {
         },
     },
 
+    // ── User Profile ──────────────────────────
+    updateProfile: async (data) => {
+        try {
+            const res = await fetch(`${API_URL}/user/profile`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data),
+                mode: 'cors'
+            });
+            if (res.status === 401) {
+                localStorage.removeItem('pw_token');
+                localStorage.removeItem('pw_user');
+                window.location.reload();
+                return { error: 'Unauthorized' };
+            }
+            if (!res.ok) throw new Error('Failed to update profile');
+            return await res.json();
+        } catch (e) {
+            console.error('Failed to update profile', e);
+            return { error: 'Connection error' };
+        }
+    },
+
     // ── Data (Protected) ─────────────────────
     getWeeks: async () => {
         try {

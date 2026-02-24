@@ -6,14 +6,17 @@ import {
     PieChart, Pie, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import '../styles/Dashboard.css';
-import weeklyAvatar from '/chewie.jpg';
 
 const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, onOpenPlanning, onToggleMenu }) => {
+    // Default avatar if none provided (avoids Vite import errors on missing files)
+    const weeklyAvatar = '/chewie.jpg';
     const { user } = useAuth();
     const [showRunwayInfo, setShowRunwayInfo] = useState(false);
     const [showRunwayMath, setShowRunwayMath] = useState(false);
     const [chartsReady, setChartsReady] = useState(false);
     const [isEditingProjection, setIsEditingProjection] = useState(false);
+    const [showWorstCase, setShowWorstCase] = useState(false);
+    const [showAvatarZoom, setShowAvatarZoom] = useState(false);
     const projectionInputRef = useRef(null);
 
     // Defer chart rendering
@@ -186,12 +189,6 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                 const globalNetWorth = totalIncome + extraIncome + startBalance - totalExpenses;
 
-                console.log("[RUNWAY DEBUG] --- Base Values ---");
-                console.log("Total Income (Salaries from Plans):", totalIncome);
-                console.log("Extra Income (Credits):", extraIncome);
-                console.log("Start Balance:", startBalance);
-                console.log("Total Expenses:", totalExpenses);
-                console.log("=> Global Net Worth:", globalNetWorth);
 
                 let monthlyBurn = 0;
                 let monthlyIncome = 0;
@@ -208,11 +205,6 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 }
 
                 const netMonthlyFlow = monthlyIncome - monthlyBurn;
-
-                console.log("[RUNWAY DEBUG] --- Monthly Flow ---");
-                console.log("Monthly Income (Latest Plan Salary):", monthlyIncome);
-                console.log("Monthly Burn (Planned Spend Categories or 4x Week):", monthlyBurn);
-                console.log("=> Net Monthly Flow:", netMonthlyFlow);
 
                 let resultString = '';
                 let detailsString = '';
@@ -291,12 +283,6 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     optIsSafe = optMonthsLeft >= 3;
                 }
 
-                console.log("[RUNWAY DEBUG] --- Final Results ---");
-                console.log("Result String:", resultString);
-                console.log("Details String:", detailsString);
-                console.log("Days Runway:", daysRunwayStr);
-                console.log("-----------------------------------");
-
                 setRealisticRunway({
                     value: resultString,
                     loading: false,
@@ -349,41 +335,28 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     return (
         <div className="dashboard-container">
             <header className="dashboard-header">
-                <div className="greeting-text">
+                <div className="dashboard-header-bg" style={{ backgroundImage: `url(${user?.avatar || '/no-avatar.jpg'})` }}></div>
+                <div className="dashboard-header-overlay"></div>
+                <button
+                    className="header-menu-btn"
+                    onClick={onToggleMenu}
+                    title="Menu"
+                    style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}
+                >
+                    ☰
+                </button>
+                <div className="greeting-text" style={{
+                    position: 'absolute', bottom: '16px', left: '16px', zIndex: 2,
+                    background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255,255,255,0.25)', borderRadius: '16px', padding: '10px 16px'
+                }}>
                     <h1>Hi, {user?.email?.split('@')[0] || 'Friend'}!</h1>
-                    <p>Financial Health Check 🩺</p>
-                </div>
-                <div className="weekly-avatar" onClick={onToggleMenu} style={{ cursor: 'pointer' }}>
-                    <img src={weeklyAvatar} alt="Profile" onError={(e) => e.target.style.display = 'none'} />
+                    <p>Financial Health Check</p>
                 </div>
             </header>
 
             {/* 1. HERO CARDS: RUNWAY & MOMENTUM */}
             <section className="hero-section">
-                <div className={`hero-card ${realisticRunway.isSafe ? 'safe-glow' : 'warning-glow'}`}>
-                    <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        <span className="hero-label" style={{ margin: 0 }}>Real Runway</span>
-                        <button
-                            className="info-icon-btn"
-                            onClick={() => setShowRunwayInfo('strict')}
-                            title="How is this calculated?"
-                        >
-                            ?
-                        </button>
-                    </div>
-                    <div className="hero-value">
-                        {realisticRunway.loading ? <span className="skeleton-text"></span> : realisticRunway.value}
-                    </div>
-                    <span className="hero-subtext">
-                        {realisticRunway.details}
-                    </span>
-                    {realisticRunway.daysRunway && !realisticRunway.isSafe && (
-                        <div className="hero-badge">
-                            ⏳ ~{realisticRunway.daysRunway} left at avg spend
-                        </div>
-                    )}
-                </div>
-
                 <div className={`hero-card ${optimisticRunway.isSafe ? 'optimistic-glow' : 'warning-glow'}`}>
                     <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', position: 'relative', width: '100%', justifyContent: 'center' }}>
                         <span className="hero-label" style={{ margin: 0 }}>Financial Momentum</span>
@@ -601,6 +574,56 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
             </section>
 
+            {/* WORST CASE SCENARIO TOGGLE */}
+            <section className="worst-case-section" style={{ padding: '0 20px', marginBottom: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <button
+                    className="worst-case-btn"
+                    onClick={() => setShowWorstCase(!showWorstCase)}
+                    style={{
+                        background: 'transparent',
+                        border: '2px dashed #EF4444',
+                        color: '#EF4444',
+                        padding: '12px 24px',
+                        borderRadius: '16px',
+                        fontFamily: 'var(--font-display)',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        marginBottom: showWorstCase ? '20px' : '0'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                    {showWorstCase ? "Hide Worst Case Scenario 🙈" : "Show Worst Case Scenario 🚨"}
+                </button>
+
+                {showWorstCase && (
+                    <div className={`hero-card ${realisticRunway.isSafe ? 'safe-glow' : 'warning-glow'}`} style={{ width: '100%', maxWidth: '600px' }}>
+                        <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', justifyContent: 'center' }}>
+                            <span className="hero-label" style={{ margin: 0 }}>Strict Runway</span>
+                            <button
+                                className="info-icon-btn"
+                                onClick={() => setShowRunwayInfo('strict')}
+                                title="How is this calculated?"
+                            >
+                                ?
+                            </button>
+                        </div>
+                        <div className="hero-value">
+                            {realisticRunway.loading ? <span className="skeleton-text"></span> : realisticRunway.value}
+                        </div>
+                        <span className="hero-subtext" style={{ textAlign: 'center', display: 'block' }}>
+                            {realisticRunway.details}
+                        </span>
+                        {realisticRunway.daysRunway && !realisticRunway.isSafe && (
+                            <div className="hero-badge" style={{ margin: '12px auto 0' }}>
+                                ⏳ ~{realisticRunway.daysRunway} left at avg spend
+                            </div>
+                        )}
+                    </div>
+                )}
+            </section>
+
             <section className="quick-actions-footer">
                 <button className="fab-main" onClick={onAddExpense}>
                     ➕ Add Expense
@@ -619,11 +642,11 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                         {showRunwayInfo === 'strict' ? (
                             <>
-                                <h2>{showRunwayMath ? "Real Runway: The Math 🧮" : "How 'Real Runway' Works ⏳"}</h2>
+                                <h2>{showRunwayMath ? "Runway: The Math 🧮" : "How 'Runway' Works ⏳"}</h2>
                                 <div className="info-content">
                                     {!showRunwayMath ? (
                                         <>
-                                            <p>The <strong>Real Runway</strong> is a strict stress-test: <em>how long could you survive if your income suddenly dropped to zero today?</em></p>
+                                            <p>The <strong>Runway</strong> is a strict stress-test: <em>how long could you survive if your income suddenly dropped to zero today?</em></p>
 
                                             <div className="info-step">
                                                 <h3>1. Total Cash Pile (Net Worth)</h3>
@@ -751,6 +774,21 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                             </>
                         )}
 
+                    </div>
+                </div>
+            )}
+
+            {/* 7. AVATAR ZOOM MODAL */}
+            {showAvatarZoom && (
+                <div className="avatar-zoom-overlay" onClick={() => setShowAvatarZoom(false)}>
+                    <div className="avatar-zoom-content" onClick={(e) => e.stopPropagation()}>
+                        <button className="avatar-zoom-close" onClick={() => setShowAvatarZoom(false)}>×</button>
+                        <img
+                            src={user?.avatar || '/no-avatar.jpg'}
+                            alt="Avatar Zoomed"
+                            className="avatar-zoom-image"
+                            onError={(e) => { e.target.onerror = null; e.target.src = '/no-avatar.jpg'; }}
+                        />
                     </div>
                 </div>
             )}

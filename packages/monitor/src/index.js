@@ -118,10 +118,6 @@ async function runHealthChecks(env, ctx = { waitUntil: () => { } }) {
     // Send to owner's Telegram
     ctx.waitUntil(sendTelegram(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID, message));
 
-    console.log("--- REPORT START ---");
-    console.log(message);
-    console.log("--- REPORT END ---");
-
     return message;
 }
 

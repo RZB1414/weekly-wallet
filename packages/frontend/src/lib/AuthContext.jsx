@@ -59,8 +59,25 @@ export function AuthProvider({ children }) {
         return result;
     };
 
+    const updateAvatar = async (newAvatarUrl) => {
+        if (!user) return { error: 'Not logged in' };
+
+        // Optimistically update local state & localStorage
+        const updatedUser = { ...user, avatar: newAvatarUrl };
+        setUser(updatedUser);
+
+        // Update user object in localStorage without losing token
+        const savedUser = JSON.parse(localStorage.getItem('pw_user') || '{}');
+        savedUser.avatar = newAvatarUrl;
+        localStorage.setItem('pw_user', JSON.stringify(savedUser));
+
+        // Sync with backend
+        const result = await api.updateProfile({ avatar: newAvatarUrl });
+        return result;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, changePassword }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, changePassword, updateAvatar }}>
             {children}
         </AuthContext.Provider>
     );

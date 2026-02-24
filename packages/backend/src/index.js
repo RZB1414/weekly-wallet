@@ -35,6 +35,7 @@ app.use('/api/weeks', authMiddleware())
 app.use('/api/weeks/*', authMiddleware())
 app.use('/api/monthly-planning/*', authMiddleware())
 app.use('/api/monthly-plannings', authMiddleware())
+app.use('/api/user/*', authMiddleware())
 
 // ──────────────────────────────────────────────
 // Helper: get user's DEK for encryption/decryption
@@ -178,6 +179,38 @@ app.get('/api/monthly-plannings', async (c) => {
   })
 
   return c.json({ plans })
+})
+
+// ──────────────────────────────────────────────
+// POST /api/user/profile
+// ──────────────────────────────────────────────
+app.post('/api/user/profile', async (c) => {
+  const email = c.get('email')
+  const bucket = c.env.WEEKLY_WALLET_BUCKET
+  const body = await c.req.json()
+
+  try {
+    const key = `users/${email.toLowerCase()}.json`
+    const obj = await bucket.get(key)
+    if (!obj) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
+    const user = await obj.json()
+
+    // Only update supported profile fields
+    if (body.avatar !== undefined) {
+      user.avatar = body.avatar
+    }
+
+    user.updatedAt = new Date().toISOString()
+    await bucket.put(key, JSON.stringify(user))
+
+    return c.json({ success: true, user: { id: user.id, email: user.email, avatar: user.avatar } })
+  } catch (err) {
+    console.error('Error updating profile:', err)
+    return c.json({ error: 'Failed to update profile' }, 500)
+  }
 })
 
 // ──────────────────────────────────────────────
