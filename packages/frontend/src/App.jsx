@@ -476,7 +476,8 @@ const App = () => {
                 </div>
             )}
 
-            {currentView === 'dashboard' ? (
+            {/* Always mount Dashboard but hide it when not active to prevent remounting/recalc */}
+            <div style={{ display: currentView === 'dashboard' ? 'block' : 'none', height: '100%' }}>
                 <Dashboard
                     weeks={weeks}
                     categories={activeCategories}
@@ -486,129 +487,109 @@ const App = () => {
                     onOpenPlanning={openMonthlyPlanning}
                     onToggleMenu={() => setShowUserMenu(!showUserMenu)}
                 />
-            ) : (
-                <div style={{ display: isAnyModalOpen ? 'none' : 'block', height: '100%' }}>
-                    {/* Back to Dashboard Button */}
-                    <button
-                        onClick={() => { setCurrentViewRaw('dashboard'); window.history.back(); }}
-                        style={{
-                            position: 'absolute',
-                            top: '20px',
-                            left: '20px',
-                            zIndex: 20,
-                            padding: '10px 15px',
-                            borderRadius: '20px',
-                            border: 'none',
-                            background: 'white',
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            color: 'var(--color-primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px'
-                        }}
-                    >
-                        <span>🏠</span> Home
-                    </button>
+            </div>
 
-                    {/* Floating User Avatar */}
-                    <div className="user-avatar-floating" onClick={() => setShowUserMenu(!showUserMenu)}>
-                        🐱
-                    </div>
+            <div className="history-view-container" style={{ display: currentView !== 'dashboard' && !isAnyModalOpen ? 'block' : 'none' }}>
 
-                    {/* Month/Year Selection Header */}
-                    <div className="filter-header" style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        padding: '20px',
-                        zIndex: 10,
-                        position: 'relative',
-                        marginTop: '50px' // Space for Home button
-                    }}>
-                        <select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                            className="glass-select"
-                        >
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                <option key={m} value={m}>{getMonthName(m)}</option>
-                            ))}
-                        </select>
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="glass-select"
-                        >
-                            {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <WeekCarousel
-                        weeks={displayedWeeks}
-                        categories={activeCategories}
-                        onUpdateWeek={(updatedWeek) => handleUpdateWeek(updatedWeek)}
-                        onGlobalAddExpense={handleGlobalAddExpense}
-                        onCreateWeek={handleCreateWeek}
-                        activeIndex={activeIndex}
-                        onIndexChange={setActiveIndex}
-                        totalSavings={totalSavings}
-                        onOpenAddExpense={handleOpenAddExpense}
-                    />
-
-                    <button
-                        className="monthly-planning-btn"
-                        onClick={openMonthlyPlanning}
-                    >
-                        Monthly Planning
-                    </button>
-
-                    {/* Floating "Go to Current" Button */}
-                    {(() => {
-                        const isCorrectMonth = selectedMonth === normalizedMonth && selectedYear === initialYear;
-                        const currentWeekIdx = isCorrectMonth ? findCurrentWeekIndex(displayedWeeks) : -1;
-                        const showButton = !isCorrectMonth || (isCorrectMonth && activeIndex !== currentWeekIdx);
-
-                        if (!showButton) return null;
-
-                        return (
+                {/* Modal-style Header for History */}
+                <div className="history-header">
+                    <div className="history-header-content">
+                        <div className="history-header-top">
+                            <h2>History</h2>
                             <button
-                                onClick={() => {
-                                    if (!isCorrectMonth) {
-                                        setSelectedMonth(normalizedMonth);
-                                        setSelectedYear(initialYear);
-                                    } else {
-                                        setActiveIndex(currentWeekIdx);
-                                    }
-                                }}
-                                style={{
-                                    position: 'fixed',
-                                    bottom: '20px',
-                                    right: '25px',
-                                    zIndex: 100,
-                                    padding: '12px 24px',
-                                    borderRadius: '30px',
-                                    border: 'none',
-                                    background: 'var(--color-primary)',
-                                    color: 'white',
-                                    boxShadow: '0 4px 15px rgba(255, 140, 0, 0.4)',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    fontSize: '1rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}
+                                className="modal-close-btn"
+                                onClick={() => setCurrentView('dashboard')}
+                                aria-label="Close"
                             >
-                                Current Week
+                                x
                             </button>
-                        );
-                    })()}
+                        </div>
+
+                        {/* Month/Year Selection Filters */}
+                        <div className="history-filters">
+                            <select
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                                className="glass-select"
+                            >
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                    <option key={m} value={m}>{getMonthName(m)}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                                className="glass-select"
+                            >
+                                {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
                 </div>
-            )}
+
+                <WeekCarousel
+                    weeks={displayedWeeks}
+                    categories={activeCategories}
+                    onUpdateWeek={(updatedWeek) => handleUpdateWeek(updatedWeek)}
+                    onGlobalAddExpense={handleGlobalAddExpense}
+                    onCreateWeek={handleCreateWeek}
+                    activeIndex={activeIndex}
+                    onIndexChange={setActiveIndex}
+                    totalSavings={totalSavings}
+                    onOpenAddExpense={handleOpenAddExpense}
+                />
+
+                <button
+                    className="monthly-planning-btn"
+                    onClick={openMonthlyPlanning}
+                >
+                    Monthly Planning
+                </button>
+
+                {/* Floating "Go to Current" Button */}
+                {(() => {
+                    const isCorrectMonth = selectedMonth === normalizedMonth && selectedYear === initialYear;
+                    const currentWeekIdx = isCorrectMonth ? findCurrentWeekIndex(displayedWeeks) : -1;
+                    const showButton = !isCorrectMonth || (isCorrectMonth && activeIndex !== currentWeekIdx);
+
+                    if (!showButton) return null;
+
+                    return (
+                        <button
+                            onClick={() => {
+                                if (!isCorrectMonth) {
+                                    setSelectedMonth(normalizedMonth);
+                                    setSelectedYear(initialYear);
+                                } else {
+                                    setActiveIndex(currentWeekIdx);
+                                }
+                            }}
+                            style={{
+                                position: 'fixed',
+                                bottom: '20px',
+                                right: '25px',
+                                zIndex: 100,
+                                padding: '12px 24px',
+                                borderRadius: '30px',
+                                border: 'none',
+                                background: 'var(--color-primary)',
+                                color: 'white',
+                                boxShadow: '0 4px 15px rgba(255, 140, 0, 0.4)',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '1rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            Current Week
+                        </button>
+                    );
+                })()}
+            </div>
 
             <MonthlyPlanningModal
                 isOpen={isMonthlyPlanningOpen}
@@ -723,6 +704,7 @@ const App = () => {
             )}
 
             {/* User Guide */}
+            <UserGuide isOpen={showUserGuide} onClose={() => setShowUserGuide(false)} />
         </div>
     );
 };

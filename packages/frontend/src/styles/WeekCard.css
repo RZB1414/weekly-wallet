@@ -271,3 +271,92 @@
 .summary-item .value.negative {
     color: #ff5252;
 }
+
+/* Tab Editor Popover */
+.edit-tabs-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    margin-left: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.edit-tabs-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--color-primary);
+}
+
+.tab-editor-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 220px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--color-soft-gray);
+    z-index: 100;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--color-soft-gray);
+}
+
+.tab-editor-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+}
+
+.tab-count {
+    font-size: 0.75rem;
+    color: var(--color-primary);
+    background: rgba(255, 140, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.tab-editor-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.tab-option-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.tab-option-label:hover {
+    color: var(--color-text-primary);
+}
+
+.tab-option-label input[type="checkbox"] {
+    accent-color: var(--color-primary);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}

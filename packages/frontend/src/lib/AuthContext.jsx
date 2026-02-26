@@ -16,14 +16,14 @@ export function AuthProvider({ children }) {
                 const parsed = JSON.parse(savedUser);
                 setUser({ ...parsed, token: savedToken });
 
-                // Fetch latest profile from backend to sync avatar across devices
+                // Fetch latest profile from backend to sync avatar and preferences across devices
                 api.getProfile().then(profile => {
-                    if (profile && !profile.error && profile.avatar) {
+                    if (profile && !profile.error) {
                         setUser(prev => {
-                            if (!prev || prev.avatar === profile.avatar) return prev;
-                            const updated = { ...prev, avatar: profile.avatar };
+                            if (!prev) return prev;
+                            const updated = { ...prev, ...profile };
                             const stored = JSON.parse(localStorage.getItem('pw_user') || '{}');
-                            stored.avatar = profile.avatar;
+                            Object.assign(stored, profile);
                             localStorage.setItem('pw_user', JSON.stringify(stored));
                             return updated;
                         });
@@ -74,24 +74,28 @@ export function AuthProvider({ children }) {
     };
 
     const updateAvatar = async (newAvatarUrl) => {
+        return updatePreferences({ avatar: newAvatarUrl });
+    };
+
+    const updatePreferences = async (preferencesData) => {
         if (!user) return { error: 'Not logged in' };
 
         // Optimistically update local state & localStorage
-        const updatedUser = { ...user, avatar: newAvatarUrl };
+        const updatedUser = { ...user, ...preferencesData };
         setUser(updatedUser);
 
         // Update user object in localStorage without losing token
         const savedUser = JSON.parse(localStorage.getItem('pw_user') || '{}');
-        savedUser.avatar = newAvatarUrl;
+        Object.assign(savedUser, preferencesData);
         localStorage.setItem('pw_user', JSON.stringify(savedUser));
 
         // Sync with backend
-        const result = await api.updateProfile({ avatar: newAvatarUrl });
+        const result = await api.updateProfile(preferencesData);
         return result;
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, changePassword, updateAvatar }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, changePassword, updateAvatar, updatePreferences }}>
             {children}
         </AuthContext.Provider>
     );

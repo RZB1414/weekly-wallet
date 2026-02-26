@@ -201,7 +201,10 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 if (latestPlanRef) {
                     const latestData = await api.getMonthlyPlanning(latestPlanRef.year, latestPlanRef.month);
                     monthlyIncome = latestData.salary || 0;
-                    monthlyBurn = latestData.categories.reduce((sum, c) => sum + (c.type === 'spend' ? c.budget : 0), 0);
+                    monthlyBurn = latestData.categories.reduce((sum, c) => {
+                        const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
+                        return sum + (c.type === 'spend' ? monthlyEquivalent : 0);
+                    }, 0);
                 }
 
                 if (monthlyBurn === 0 && currentWeekData) {
@@ -315,13 +318,13 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
             }
         };
 
-        if (weeks.length > 0) {
+        if (weeks && weeks.length > 0) {
             calculateRunway();
         } else {
             setRealisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
             setOptimisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
         }
-    }, [weeks]);
+    }, [weeks, categories]);
 
     // Format relative time (e.g. "Today", "Yesterday", "Oct 12")
     const formatExpenseDate = (dateString) => {
@@ -450,7 +453,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                     </div>
 
                                     <span className="projection-result">
-                                        : <strong style={{ color: '#111827' }}>{formatCurrency(optimisticRunway.wealth + (optimisticRunway.netMonthlyFlow * (Number(projectionMonths) || 0)))}</strong>
+                                        <strong style={{ color: '#111827' }}>{formatCurrency(optimisticRunway.wealth + (optimisticRunway.netMonthlyFlow * (Number(projectionMonths) || 0)))}</strong>
                                     </span>
                                 </div>
                             </>
@@ -587,55 +590,57 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 </div>
             </section>
 
-            {/* WORST CASE SCENARIO TOGGLE */}
-            <section className="worst-case-section" style={{ padding: '0 20px', marginBottom: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {/* WORST CASE SCENARIO BUTTON */}
+            <section className="worst-case-section-apocalipse">
                 <button
-                    className="worst-case-btn"
-                    onClick={() => setShowWorstCase(!showWorstCase)}
-                    style={{
-                        background: 'transparent',
-                        border: '2px dashed #EF4444',
-                        color: '#EF4444',
-                        padding: '12px 24px',
-                        borderRadius: '16px',
-                        fontFamily: 'var(--font-display)',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        marginBottom: showWorstCase ? '20px' : '0'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                    className="worst-case-btn-apocalipse"
+                    onClick={() => setShowWorstCase(true)}
                 >
-                    {showWorstCase ? "Hide Worst Case Scenario 🙈" : "Show Worst Case Scenario 🚨"}
+                    Show Worst Case Scenario
                 </button>
-
-                {showWorstCase && (
-                    <div className={`hero-card ${realisticRunway.isSafe ? 'safe-glow' : 'warning-glow'}`} style={{ width: '100%', maxWidth: '600px' }}>
-                        <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', justifyContent: 'center' }}>
-                            <span className="hero-label" style={{ margin: 0 }}>Strict Runway</span>
-                            <button
-                                className="info-icon-btn"
-                                onClick={() => setShowRunwayInfo('strict')}
-                                title="How is this calculated?"
-                            >
-                                ?
-                            </button>
-                        </div>
-                        <div className="hero-value">
-                            {realisticRunway.loading ? <span className="skeleton-text"></span> : realisticRunway.value}
-                        </div>
-                        <span className="hero-subtext" style={{ textAlign: 'center', display: 'block' }}>
-                            {realisticRunway.details}
-                        </span>
-                        {realisticRunway.daysRunway && !realisticRunway.isSafe && (
-                            <div className="hero-badge" style={{ margin: '12px auto 0' }}>
-                                ⏳ ~{realisticRunway.daysRunway} left at avg spend
-                            </div>
-                        )}
-                    </div>
-                )}
             </section>
+
+            {/* FULL PAGE APOCALYPTIC OVERLAY */}
+            {showWorstCase && (
+                <div className="worst-case-overlay" onClick={() => setShowWorstCase(false)}>
+                    {/* APOCALYPSE VIDEO BACKGROUND */}
+                    <video className="apocalypse-video" autoPlay loop muted playsInline>
+                        <source src="/apocalipse-cats.mp4" type="video/mp4" />
+                    </video>
+
+                    <button className="worst-case-close-btn" onClick={(e) => { e.stopPropagation(); setShowWorstCase(false); }}>
+                        ESCAPE THE APOCALYPSE
+                    </button>
+                    <div className="worst-case-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="apocalypse-title-apocalipse">
+                            WORST CASE SCENARIO
+                        </h2>
+                        <div className="hero-card worst-case-card-blend hero-card-apocalipse">
+                            <div className="hero-label-wrapper-apocalipse">
+                                <span className="hero-label-apocalipse">Strict Runway Survival</span>
+                                <button
+                                    className="info-icon-btn-apocalipse"
+                                    onClick={() => setShowRunwayInfo('strict')}
+                                    title="How is this calculated?"
+                                >
+                                    ?
+                                </button>
+                            </div>
+                            <div className="hero-value-apocalipse">
+                                {realisticRunway.loading ? <span className="skeleton-text"></span> : realisticRunway.value}
+                            </div>
+                            <span className="hero-subtext-apocalipse">
+                                {realisticRunway.details}
+                            </span>
+                            {realisticRunway.daysRunway && !realisticRunway.isSafe && (
+                                <div className="hero-badge-apocalipse">
+                                    ⏳ ~{realisticRunway.daysRunway} left at avg spend
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <section className="quick-actions-footer">
                 <button className="fab-main" onClick={onAddExpense}>

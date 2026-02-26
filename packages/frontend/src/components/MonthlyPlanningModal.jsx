@@ -277,7 +277,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         const spendCategoryNames = spendCategories.map(c => c.name);
 
         spendCategories.forEach(cat => {
-            total += cat.budget;
+            total += cat.frequency === 'weekly' ? (cat.budget || 0) * 4 : (cat.budget || 0);
         });
 
         // 2. Add Actuals of 'Credit' categories AND Uncategorized
@@ -291,20 +291,26 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     }, [categories, monthlyExpenses]);
 
     // Remaining Balance Logic:
-    // Salary - Total Spent
+    // Salary - Sum of all categories' budgets (credits + spends)
     const remainingAmount = useMemo(() => {
-        return salary - totalCalculatedSpent;
-    }, [salary, totalCalculatedSpent]);
+        const totalBudgets = categories.reduce((sum, cat) => {
+            const monthlyEquivalent = cat.frequency === 'weekly' ? (cat.budget || 0) * 4 : (cat.budget || 0);
+            return sum + monthlyEquivalent;
+        }, 0);
+        return salary - totalBudgets;
+    }, [salary, categories]);
 
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
     // Category Summary Logic
     const categorySummaries = categories.map(cat => {
         const spent = getCategorySpent(cat.name);
+        const monthlyBudget = cat.frequency === 'weekly' ? (cat.budget || 0) * 4 : (cat.budget || 0);
         return {
             ...cat,
+            monthlyBudget,
             spent,
-            remaining: cat.budget - spent,
+            remaining: monthlyBudget - spent,
             expenses: monthlyExpenses.filter(e => e.category === cat.name)
         };
     });
@@ -487,7 +493,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                                                 ({cat.type === 'spend' ? 'Spend' : 'Credit'} • {cat.frequency === 'weekly' ? 'Weekly' : 'Monthly'})
                                                             </small>
                                                         </span>
-                                                        <span>AED {cat.budget.toFixed(2)}</span>
+                                                        <span>AED {(cat.monthlyBudget || 0).toFixed(2)}</span>
                                                     </div>
                                                     <div className="cat-sum-row">
                                                         <span>Spent:</span>
@@ -614,7 +620,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                 <span>AED {totalCalculatedSpent.toFixed(2)}</span>
                             </div>
                             <div className="summary-row" style={{ color: remainingAmount >= 0 ? '#4caf50' : '#ff5252', fontWeight: 'bold' }}>
-                                <span>Remaining Global Balance</span>
+                                <span>Remaining Monthly Balance</span>
                                 <span>AED {remainingAmount.toFixed(2)}</span>
                             </div>
 

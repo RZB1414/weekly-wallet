@@ -196,7 +196,7 @@ app.get('/api/user/profile', async (c) => {
     }
 
     const user = await obj.json()
-    return c.json({ id: user.id, email: user.email, avatar: user.avatar || '/no-avatar.jpg' })
+    return c.json({ id: user.id, email: user.email, avatar: user.avatar || '/no-avatar.jpg', customTabs: user.customTabs, projectionMonths: user.projectionMonths })
   } catch (err) {
     console.error('Error reading profile:', err)
     return c.json({ error: 'Failed to read profile' }, 500)
@@ -224,11 +224,17 @@ app.post('/api/user/profile', async (c) => {
     if (body.avatar !== undefined) {
       user.avatar = body.avatar
     }
+    if (body.customTabs !== undefined) {
+      user.customTabs = body.customTabs
+    }
+    if (body.projectionMonths !== undefined) {
+      user.projectionMonths = body.projectionMonths
+    }
 
     user.updatedAt = new Date().toISOString()
     await bucket.put(key, JSON.stringify(user))
 
-    return c.json({ success: true, user: { id: user.id, email: user.email, avatar: user.avatar } })
+    return c.json({ success: true, user: { id: user.id, email: user.email, avatar: user.avatar, customTabs: user.customTabs, projectionMonths: user.projectionMonths } })
   } catch (err) {
     console.error('Error updating profile:', err)
     return c.json({ error: 'Failed to update profile' }, 500)

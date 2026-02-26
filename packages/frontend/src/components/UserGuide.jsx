@@ -26,10 +26,10 @@ const UserGuide = ({ isOpen, onClose }) => {
                             <span className="guide-step-num">1</span>
                             <h2>Getting Started</h2>
                         </div>
-                        <p className="guide-text">Create an account with your email and a password. Optionally add your <strong>Telegram username</strong> to enable password recovery via bot.</p>
+                        <p className="guide-text">Create an account with your email and a password. You will receive a <strong>Recovery Key</strong> during registration.</p>
                         <div className="guide-tip">
-                            <strong>💡 Tip</strong>
-                            <p>Adding Telegram lets you reset your password through <strong>@WeeklyWalletBot</strong> — no email needed!</p>
+                            <strong>⚠️ CRITICAL</strong>
+                            <p>Save your <strong>Recovery Key</strong> in a safe place! It is the ONLY way to recover your account if you forget your password.</p>
                         </div>
                     </section>
 
@@ -56,10 +56,10 @@ const UserGuide = ({ isOpen, onClose }) => {
                                 </div>
                             </div>
                             <div className="guide-feature">
-                                <span className="guide-feature-icon">📈</span>
+                                <span className="guide-feature-icon">🚀</span>
                                 <div>
-                                    <strong>Trend</strong>
-                                    <p>Cumulative spending vs ideal line. Toggle weekly/monthly views.</p>
+                                    <strong>Financial Momentum & Runway</strong>
+                                    <p>See how your wealth is growing or how long your savings will last at your current burn rate.</p>
                                 </div>
                             </div>
                             <div className="guide-feature">
@@ -119,58 +119,40 @@ const UserGuide = ({ isOpen, onClose }) => {
                         <ol className="guide-steps">
                             <li>Enter your <strong>monthly salary</strong></li>
                             <li>Add <strong>categories</strong> with name, type, and budget</li>
-                            <li>Choose type: <span className="guide-badge-green">Credit</span> (deductions from salary) or <span className="guide-badge-red">Spend</span> (weekly budget)</li>
-                            <li>Set <strong>frequency</strong>: weekly or monthly (÷4)</li>
+                            <li>Choose type: <span className="guide-badge-green">Credit</span> or <span className="guide-badge-red">Spend</span></li>
+                            <li>Set <strong>frequency</strong>: weekly or monthly</li>
                             <li>Tap <strong>Save</strong></li>
                         </ol>
                         <div className="guide-tip">
-                            <strong>💡 Budget Calculation</strong>
-                            <p><strong>Weekly</strong> categories → budget per week as-is. <strong>Monthly</strong> → budget ÷ 4 = weekly allowance.</p>
+                            <strong>💡 How Categories Work</strong>
+                            <p><strong><span className="guide-badge-green">Credit</span>:</strong> The amount is deducted from your <strong>Global Monthly Balance</strong> (used for planning), but it is <strong>NOT</strong> automatically recorded as an expense. It creates a "Credit Account" (like Market or Uber) for you to spend from throughout the month.</p>
+                            <p style={{ marginTop: '8px' }}><strong><span className="guide-badge-red">Spend</span>:</strong> The amount is immediately considered "spent" or "saved" (like a fixed bill, debt payment, or money put into Savings). It is deducted both from the Global Balance and instantly affects your actual cash flow.</p>
                         </div>
                     </section>
 
-                    {/* Section 6 — Telegram & Security */}
+                    {/* Section 6 — Recovery Key & Security */}
                     <section className="guide-section">
                         <div className="guide-section-header">
                             <span className="guide-step-num">6</span>
-                            <h2>Telegram & Security</h2>
+                            <h2>Recovery Key & Security</h2>
                         </div>
 
-                        {/* 6a — Linking Telegram */}
-                        <p className="guide-text" style={{ fontWeight: 700, color: '#1F2937', marginBottom: 6 }}>📱 Step A: Link Your Telegram Account</p>
-                        <p className="guide-text">First, you need to link your Telegram account to Weekly Wallet. You can do this during registration or at any time after:</p>
-                        <ol className="guide-steps">
-                            <li>Tap the <strong>cat avatar</strong> (top right of Dashboard)</li>
-                            <li>Select <strong>"📱 Link Telegram"</strong></li>
-                            <li>A <strong>6-digit code</strong> will appear on screen (valid for 10 minutes)</li>
-                            <li>Open <strong>Telegram</strong> on your phone</li>
-                            <li>Search for <strong>@WeeklyWalletBot</strong> and tap <strong>Start</strong> (or send <strong>/start</strong>) to activate the bot</li>
-                            <li>Send the <strong>6-digit code</strong> as a message to the bot</li>
-                            <li>The bot will reply with <strong>"✅ Account linked!"</strong></li>
-                        </ol>
-                        <div className="guide-tip">
-                            <strong>💡 Important</strong>
-                            <p>You only need to link once. After linking, the bot knows your account and can send you reset codes whenever you need.</p>
-                        </div>
-
-                        {/* 6b — Password Reset */}
-                        <p className="guide-text" style={{ fontWeight: 700, color: '#1F2937', marginTop: 24, marginBottom: 6 }}>🔑 Step B: Resetting Your Password via Telegram</p>
-                        <p className="guide-text">Forgot your password? If you linked Telegram, follow these steps:</p>
+                        {/* 6a — Password Reset */}
+                        <p className="guide-text" style={{ fontWeight: 700, color: '#1F2937', marginBottom: 6 }}>🔑 Resetting Your Password</p>
+                        <p className="guide-text">Forgot your password? You will need your Recovery Key to regain access:</p>
                         <ol className="guide-steps">
                             <li>On the <strong>Login page</strong>, tap <strong>"Forgot Password?"</strong></li>
-                            <li>Enter your <strong>Telegram username</strong> (the one you linked)</li>
-                            <li>Tap <strong>"Send Reset Code"</strong></li>
-                            <li>Open <strong>Telegram</strong> — the bot (<strong>@WeeklyWalletBot</strong>) will send you a <strong>6-digit code</strong></li>
-                            <li>Go back to the app and enter the <strong>reset code</strong></li>
-                            <li>Type your <strong>new password</strong> (min. 8 characters)</li>
+                            <li>Enter your <strong>Email</strong> and your <strong>Recovery Key</strong> (e.g., pw-rec-...)</li>
+                            <li>Tap <strong>"Recover Account"</strong></li>
+                            <li>You will be prompted to create a <strong>new password</strong></li>
                             <li>Tap <strong>"Reset Password"</strong> — done! You can now log in with your new password</li>
                         </ol>
                         <div className="guide-tip">
-                            <strong>⚠️ Didn't receive the code?</strong>
-                            <p>Make sure you linked the correct Telegram account. The code expires after 10 minutes — if it expired, tap "Send Reset Code" again to get a new one.</p>
+                            <strong>⚠️ Lost your Recovery Key?</strong>
+                            <p>If you lose your Recovery Key and forget your password, your account cannot be restored under any circumstances. Keep it safe!</p>
                         </div>
 
-                        {/* 6c — Security */}
+                        {/* 6b — Security */}
                         <p className="guide-text" style={{ fontWeight: 700, color: '#1F2937', marginTop: 24, marginBottom: 6 }}>🔐 Your Data is Secure</p>
                         <div className="guide-security">
                             <h3>End-to-End Encryption</h3>
@@ -197,7 +179,7 @@ const UserGuide = ({ isOpen, onClose }) => {
                             <div className="guide-ref-item"><span>📈</span> <strong>Trends</strong> — Scroll → toggle weekly/monthly</div>
                             <div className="guide-ref-item"><span>🔄</span> <strong>Split</strong> — Add Expense → installments</div>
                             <div className="guide-ref-item"><span>💰</span> <strong>Savings</strong> — "Savings" category tracks deposits</div>
-                            <div className="guide-ref-item"><span>🔑</span> <strong>Reset</strong> — "Forgot Password" → Telegram code</div>
+                            <div className="guide-ref-item"><span>🔑</span> <strong>Reset</strong> — "Forgot Password" → Recovery Key</div>
                             <div className="guide-ref-item"><span>🚀</span> <strong>Runway</strong> — Tap explosion icon on Dashboard!</div>
                         </div>
                     </section>

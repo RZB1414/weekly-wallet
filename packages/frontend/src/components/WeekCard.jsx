@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 import ExpenseList from './ExpenseList';
 import { formatCurrency, calculateRemaining, getWeekRange, formatDate } from '../lib/utils';
+import { useAuth } from '../lib/AuthContext';
 import '../styles/WeekCard.css';
 
 const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings, onOpenAddExpense }) => {
@@ -14,7 +15,33 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
         }
     };
 
-    const [viewMode, setViewMode] = useState('LATEST'); // 'LATEST' | 'MARKET'
+    const { user, updatePreferences } = useAuth();
+    const [viewMode, setViewMode] = useState('LATEST'); // 'LATEST' | custom tab string
+    const [selectedCustomTabs, setSelectedCustomTabs] = useState(() => {
+        if (user?.customTabs && Array.isArray(user.customTabs)) {
+            return user.customTabs;
+        }
+        const saved = localStorage.getItem('weekCardCustomTabs');
+        return saved ? JSON.parse(saved) : ['Market', 'Coffee', 'Savings'];
+    });
+
+    useEffect(() => {
+        if (user?.customTabs && Array.isArray(user.customTabs)) {
+            setSelectedCustomTabs(user.customTabs);
+        }
+    }, [user?.customTabs]);
+    const [showTabEditor, setShowTabEditor] = useState(false);
+    const popoverRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+                setShowTabEditor(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const getStatus = () => {
         if (!week.startDate || !week.endDate) return 'UNKNOWN';
@@ -34,45 +61,47 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
     const status = getStatus();
 
-    // Market Logic
-    const marketCategory = categories.find(c => c.name.toLowerCase() === 'market' || c.name.toLowerCase() === 'mercado');
-    // Calculate Budget based on Frequency
-    const marketBudget = marketCategory ? (marketCategory.budget || 0) : 0;
-    const isMarketWeekly = marketCategory?.frequency === 'weekly';
-    const weeklyMarketBudget = isMarketWeekly ? marketBudget : marketBudget / 4;
+    const getCategoryData = (catName) => {
+        if (!catName || catName === 'LATEST') return null;
 
-    // Calculate spent specific to market
-    const marketExpenses = week.expenses.filter(e =>
-        e.category.toLowerCase() === 'market' || e.category.toLowerCase() === 'mercado'
-    );
-    const marketSpent = marketExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const marketRemaining = weeklyMarketBudget - marketSpent;
+        const cat = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        const budget = cat ? (cat.budget || 0) : 0;
+        const isWeekly = cat?.frequency === 'weekly';
+        const lowerName = catName.toLowerCase();
 
-    // Coffee Logic
-    const coffeeCategory = categories.find(c => c.name.toLowerCase() === 'coffee' || c.name.toLowerCase() === 'café');
-    const coffeeBudget = coffeeCategory ? (coffeeCategory.budget || 0) : 0;
-    const isCoffeeWeekly = coffeeCategory?.frequency === 'weekly';
+        let label1, val1, label2, val2, val2Class;
+        const catExpenses = week.expenses.filter(e => e.category.toLowerCase() === lowerName);
+        const spent = catExpenses.reduce((acc, curr) => acc + curr.amount, 0);
 
-    // For Coffee, we display the defined budget (whether weekly or monthly)
-    // If Weekly, we compare match weekly spend to weekly budget.
-    // If Monthly, we compare weekly spend to monthly budget (legacy behavior preserved).
-    const displayCoffeeBudget = coffeeBudget;
+        if (lowerName === 'savings' || lowerName === 'poupança') {
+            label1 = 'Saved this month';
+            val1 = budget + (currentMonthSavings || 0);
+            label2 = 'Total saved';
+            val2 = totalSavings || 0;
+            val2Class = 'positive';
+            return { label1, val1, label2, val2, val2Class, expenses: catExpenses };
+        }
 
-    const coffeeExpenses = week.expenses.filter(e =>
-        e.category.toLowerCase() === 'coffee' || e.category.toLowerCase() === 'café'
-    );
-    const coffeeSpent = coffeeExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const coffeeRemaining = displayCoffeeBudget - coffeeSpent;
+        let displayBudget = budget;
+        if (lowerName === 'market' || lowerName === 'mercado') {
+            displayBudget = isWeekly ? budget : budget / 4;
+            label1 = 'Weekly Budget';
+        } else if (lowerName === 'coffee' || lowerName === 'café') {
+            displayBudget = budget;
+            label1 = isWeekly ? 'Weekly Budget' : 'Monthly Budget';
+        } else {
+            // Default generic behavior
+            displayBudget = isWeekly ? budget : budget / 4;
+            label1 = isWeekly ? 'Weekly Budget' : 'Weekly Eq. Budget';
+        }
 
-    // Savings Logic
-    const savingsCategory = categories.find(c => c.name.toLowerCase() === 'savings' || c.name.toLowerCase() === 'poupança');
-    const monthlySavingsBudget = savingsCategory ? (savingsCategory.budget || 0) : 0;
+        const remaining = displayBudget - spent;
+        label2 = 'Remaining';
+        val2 = remaining;
+        val2Class = remaining < 0 ? 'negative' : 'positive';
 
-    const savingsExpenses = week.expenses.filter(e =>
-        e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança'
-    );
-    const savingsSpent = savingsExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const savingsRemaining = monthlySavingsBudget - savingsSpent;
+        return { label1, val1: displayBudget, label2, val2, val2Class, expenses: catExpenses };
+    };
 
     return (
         <div className={`week-card ${status.toLowerCase()}`}>
@@ -92,7 +121,7 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                     <span className={`week-status ${status.toLowerCase()}`}>{status}</span>
                 </div>
 
-                <div className="header-actions-weekcard">
+                <div className="header-actions-weekcard" style={{ position: 'relative' }}>
                     {/* View Tabs */}
                     <div className="view-tabs">
                         <button
@@ -101,85 +130,90 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                         >
                             Latest
                         </button>
-                        <button
-                            className={`view-tab ${viewMode === 'MARKET' ? 'active' : ''}`}
-                            onClick={() => setViewMode('MARKET')}
-                        >
-                            Market
-                        </button>
-                        <button
-                            className={`view-tab ${viewMode === 'COFFEE' ? 'active' : ''}`}
-                            onClick={() => setViewMode('COFFEE')}
-                        >
-                            Coffee
-                        </button>
-                        <button
-                            className={`view-tab ${viewMode === 'SAVINGS' ? 'active' : ''}`}
-                            onClick={() => setViewMode('SAVINGS')}
-                        >
-                            Savings
-                        </button>
+                        {selectedCustomTabs.map(tab => (
+                            <button
+                                key={tab}
+                                className={`view-tab ${viewMode === tab ? 'active' : ''}`}
+                                onClick={() => setViewMode(tab)}
+                            >
+                                {tab}
+                            </button>
+                        ))}
                     </div>
+                    <button
+                        className="edit-tabs-btn"
+                        onClick={() => setShowTabEditor(!showTabEditor)}
+                        title="Edit View Tabs"
+                    >
+                        <Settings size={18} />
+                    </button>
+
+                    {showTabEditor && (
+                        <div className="tab-editor-popover" ref={popoverRef}>
+                            <div className="tab-editor-header">
+                                <h4>Select 3 Tabs</h4>
+                                <span className="tab-count">{selectedCustomTabs.length}/3</span>
+                            </div>
+                            <div className="tab-editor-options">
+                                {categories.map(c => (
+                                    <label key={c.name} className="tab-option-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedCustomTabs.includes(c.name)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    if (selectedCustomTabs.length >= 3) {
+                                                        alert('You can only select up to 3 categories.');
+                                                        return;
+                                                    }
+                                                    const newTabs = [...selectedCustomTabs, c.name];
+                                                    setSelectedCustomTabs(newTabs);
+                                                    localStorage.setItem('weekCardCustomTabs', JSON.stringify(newTabs));
+                                                    updatePreferences({ customTabs: newTabs });
+                                                } else {
+                                                    const newTabs = selectedCustomTabs.filter(t => t !== c.name);
+                                                    setSelectedCustomTabs(newTabs);
+                                                    localStorage.setItem('weekCardCustomTabs', JSON.stringify(newTabs));
+                                                    updatePreferences({ customTabs: newTabs });
+                                                    if (viewMode === c.name) setViewMode('LATEST');
+                                                }
+                                            }}
+                                        />
+                                        <span>{c.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
             <div className="card-content">
-                {viewMode === 'LATEST' && (
+                {viewMode === 'LATEST' ? (
                     <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} />
-                )}
+                ) : (
+                    (() => {
+                        const data = getCategoryData(viewMode);
+                        if (!data) return <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} />;
 
-                {viewMode === 'MARKET' && (
-                    <div className="supermarket-view">
-                        <div className="supermarket-summary">
-                            <div className="summary-item">
-                                <span className="label">Weekly Budget</span>
-                                <span className="value">{formatCurrency(weeklyMarketBudget)}</span>
+                        return (
+                            <div className="supermarket-view">
+                                <div className="supermarket-summary">
+                                    <div className="summary-item">
+                                        <span className="label">{data.label1}</span>
+                                        <span className="value">{formatCurrency(data.val1)}</span>
+                                    </div>
+                                    <div className="summary-item main">
+                                        <span className="label">{data.label2}</span>
+                                        <span className={`value ${data.val2Class}`}>
+                                            {formatCurrency(data.val2)}
+                                        </span>
+                                    </div>
+                                </div>
+                                <ExpenseList expenses={data.expenses} onDelete={handleDeleteExpense} />
                             </div>
-                            <div className="summary-item main">
-                                <span className="label">Remaining</span>
-                                <span className={`value ${marketRemaining < 0 ? 'negative' : 'positive'}`}>
-                                    {formatCurrency(marketRemaining)}
-                                </span>
-                            </div>
-                        </div>
-                        <ExpenseList expenses={marketExpenses} onDelete={handleDeleteExpense} />
-                    </div>
-                )}
-
-                {viewMode === 'COFFEE' && (
-                    <div className="supermarket-view">
-                        <div className="supermarket-summary">
-                            <div className="summary-item">
-                                <span className="label">{isCoffeeWeekly ? 'Weekly Budget' : 'Monthly Budget'}</span>
-                                <span className="value">{formatCurrency(displayCoffeeBudget)}</span>
-                            </div>
-                            <div className="summary-item main">
-                                <span className="label">Remaining</span>
-                                <span className={`value ${coffeeRemaining < 0 ? 'negative' : 'positive'}`}>
-                                    {formatCurrency(coffeeRemaining)}
-                                </span>
-                            </div>
-                        </div>
-                        <ExpenseList expenses={coffeeExpenses} onDelete={handleDeleteExpense} />
-                    </div>
-                )}
-
-                {viewMode === 'SAVINGS' && (
-                    <div className="supermarket-view">
-                        <div className="supermarket-summary">
-                            <div className="summary-item">
-                                <span className="label">Saved this month</span>
-                                <span className="value">{formatCurrency((monthlySavingsBudget || 0) + (currentMonthSavings || 0))}</span>
-                            </div>
-                            <div className="summary-item main">
-                                <span className="label">Total saved</span>
-                                <span className={`value positive`}>
-                                    {formatCurrency(totalSavings || 0)}
-                                </span>
-                            </div>
-                        </div>
-                        <ExpenseList expenses={savingsExpenses} onDelete={handleDeleteExpense} />
-                    </div>
+                        );
+                    })()
                 )}
             </div>
 
