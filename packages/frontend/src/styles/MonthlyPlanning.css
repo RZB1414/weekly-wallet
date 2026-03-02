@@ -601,6 +601,12 @@
     font-weight: 600;
 }
 
+.type-btn.active {
+    background: white;
+    color: var(--color-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 .type-btn.active.expense {
     background: white;
     color: var(--color-text-alert);

@@ -197,6 +197,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                 let monthlyBurn = 0;
                 let monthlyIncome = 0;
+                let totalBudgets = 0;
                 const latestPlanRef = plansList.plans && plansList.plans.length > 0 ? plansList.plans[0] : null;
 
                 if (latestPlanRef) {
@@ -206,13 +207,20 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                         const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
                         return sum + (c.type === 'spend' ? monthlyEquivalent : 0);
                     }, 0);
+                    totalBudgets = latestData.categories.reduce((sum, c) => {
+                        const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
+                        return sum + monthlyEquivalent;
+                    }, 0);
                 }
 
                 if (monthlyBurn === 0 && currentWeekData) {
                     monthlyBurn = currentWeekData.spent * 4;
                 }
+                if (totalBudgets === 0 && currentWeekData) {
+                    totalBudgets = currentWeekData.spent * 4;
+                }
 
-                const netMonthlyFlow = monthlyIncome - monthlyBurn;
+                const netMonthlyFlow = monthlyIncome - totalBudgets;
 
                 let resultString = '';
                 let detailsString = '';
@@ -309,7 +317,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     netMonthlyFlow, // Pass flow straight to state to render dynamic projections
                     daysRunway: '', // Usually not helpful for optimistic view
                     isSafe: optIsSafe,
-                    raw: { monthlyIncome, monthlyBurn: burnToUse, netMonthlyFlow }
+                    raw: { monthlyIncome, monthlyBurn: burnToUse, totalBudgets, netMonthlyFlow }
                 });
 
             } catch (err) {
@@ -751,7 +759,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                                             <div className="info-step">
                                                 <h3>1. Wealth Growing</h3>
-                                                <p>We subtract your <strong>Monthly Burn</strong> from your <strong>Monthly Salary</strong>. If the result is positive, congratulations! Your wealth is growing every month.</p>
+                                                <p>We subtract your <strong>Total Budget Allocation</strong> (including savings and spending categories) from your <strong>Monthly Salary</strong>. This gives your Remaining Monthly Balance! If the result is positive, congratulations! Your wealth is growing every month.</p>
                                             </div>
 
                                             <div className="info-step">
@@ -775,7 +783,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                                 <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Net Monthly Flow</h3>
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
                                                     <span>+ Monthly Salary:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(optimisticRunway.raw?.monthlyIncome || 0)}</span>
-                                                    <span style={{ color: '#EF4444' }}>- Monthly Burn:</span> <span style={{ textAlign: 'right', color: '#EF4444' }}>{formatCurrency(optimisticRunway.raw?.monthlyBurn || 0)}</span>
+                                                    <span style={{ color: '#EF4444' }}>- Total Budget:</span> <span style={{ textAlign: 'right', color: '#EF4444' }}>{formatCurrency(optimisticRunway.raw?.totalBudgets || 0)}</span>
                                                     <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
                                                     <strong>= Net Flow:</strong> <strong style={{ textAlign: 'right', color: (optimisticRunway.raw?.netMonthlyFlow || 0) >= 0 ? '#059669' : '#EF4444' }}>{formatCurrency(optimisticRunway.raw?.netMonthlyFlow || 0)}</strong>
                                                 </div>

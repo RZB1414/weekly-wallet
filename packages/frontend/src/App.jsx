@@ -499,11 +499,11 @@ const App = () => {
                         <div className="history-header-top">
                             <h2>History</h2>
                             <button
-                                className="modal-close-btn"
+                                className="close-button"
                                 onClick={() => setCurrentView('dashboard')}
                                 aria-label="Close"
                             >
-                                x
+                                &times;
                             </button>
                         </div>
 
