@@ -96,11 +96,12 @@
     font-weight: 500;
 }
 
-/* History View Container */
 .history-view-container {
     height: 100%;
     background-color: var(--color-bg);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Momentum scrolling for iOS */
     padding-bottom: 80px;
 }
 
