@@ -63,6 +63,11 @@
     white-space: nowrap;
 }
 
+.credit-amount {
+    color: #10B981 !important;
+    /* Green for credits */
+}
+
 .expense-actions {
     display: flex;
     align-items: center;

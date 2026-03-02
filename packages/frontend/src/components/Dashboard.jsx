@@ -168,8 +168,9 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         const calculateRunway = async () => {
             setRealisticRunway(prev => ({ ...prev, loading: true }));
             try {
+                // Fetch plans data fresh each time the calculation runs
+                // This only happens when weeks or categories actually change
                 const plansList = await api.getMonthlyPlannings();
-
                 const allPlansData = plansList.plans ? await Promise.all(
                     plansList.plans.map(p => api.getMonthlyPlanning(p.year, p.month))
                 ) : [];
@@ -620,7 +621,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                 <span className="hero-label-apocalipse">Strict Runway Survival</span>
                                 <button
                                     className="info-icon-btn-apocalipse"
-                                    onClick={() => setShowRunwayInfo('strict')}
+                                    onClick={() => { setShowWorstCase(false); setShowRunwayInfo('strict'); }}
                                     title="How is this calculated?"
                                 >
                                     ?
@@ -632,6 +633,29 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                             <span className="hero-subtext-apocalipse">
                                 {realisticRunway.details}
                             </span>
+                            {!realisticRunway.loading && (() => {
+                                const burn = realisticRunway.raw?.monthlyBurn || 0;
+                                const runwayMonths = burn > 0 ? realisticRunway.wealth / burn : Infinity;
+                                if (runwayMonths >= 6) {
+                                    return (
+                                        <div className="survival-status-apocalipse survival-safe-apocalipse">
+                                            🛡️ You'll cruise through the apocalypse! Your emergency fund is solid enough to weather any storm.
+                                        </div>
+                                    );
+                                } else if (runwayMonths >= 3) {
+                                    return (
+                                        <div className="survival-status-apocalipse survival-tight-apocalipse">
+                                            ⚠️ You'll survive, but it'll be tight. The apocalypse will test your limits — start stacking supplies!
+                                        </div>
+                                    );
+                                } else {
+                                    return (
+                                        <div className="survival-status-apocalipse survival-zombie-apocalipse">
+                                            🧟 You're about to join the zombie horde! Without more reserves, survival is not guaranteed...
+                                        </div>
+                                    );
+                                }
+                            })()}
                             {realisticRunway.daysRunway && !realisticRunway.isSafe && (
                                 <div className="hero-badge-apocalipse">
                                     ⏳ ~{realisticRunway.daysRunway} left at avg spend
@@ -664,22 +688,22 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                 <div className="info-content">
                                     {!showRunwayMath ? (
                                         <>
-                                            <p>The <strong>Runway</strong> is a strict stress-test: <em>how long could you survive if your income suddenly dropped to zero today?</em></p>
+                                            <p>The <strong>Strict Runway</strong> is a worst-case stress-test: <em>how long could you survive if all income stopped today?</em></p>
 
                                             <div className="info-step">
-                                                <h3>1. Total Cash Pile (Net Worth)</h3>
-                                                <p>We sum up every real penny you have — initial starting balance + all historical income + extra credits — minus all historical expenses. This is your war chest.</p>
+                                                <h3>1. Global Net Worth</h3>
+                                                <p>We calculate your total real wealth by adding: your <strong>initial starting balance</strong> + all <strong>salaries</strong> from every Monthly Plan + any <strong>extra credits</strong> logged in your weeks — then subtracting all <strong>historical expenses</strong> across every week.</p>
                                             </div>
 
                                             <div className="info-step">
-                                                <h3>2. Monthly Burn</h3>
-                                                <p>We look at your current Monthly Plan to see your regular scheduled 'spend' categories to determine your standard monthly cost of living.</p>
+                                                <h3>2. Monthly Burn Rate</h3>
+                                                <p>We pull your <strong>latest Monthly Plan</strong> and sum all categories marked as 'spend'. Weekly categories are multiplied by 4 to get a monthly equivalent. If no plan exists, we estimate by multiplying your <strong>current week's spending × 4</strong>.</p>
                                             </div>
 
                                             <div className="info-step">
                                                 <h3>3. The Result</h3>
-                                                <p>We divide your Total Cash Pile by your Monthly Burn to tell you exactly how many months you can survive.<br />
-                                                    If you possess at least 3 months of runway, you earn a <strong>Safe 🟢</strong> badge! 🔴 means keep building your emergency fund.</p>
+                                                <p>We divide your <strong>Net Worth</strong> by your <strong>Monthly Burn</strong> — assuming zero future income. This tells you exactly how many months you could survive.<br />
+                                                    ≥ 3 months = <strong>Safe 🟢</strong> · under 3 months = <strong>Danger 🔴</strong>. If under 90 days, a countdown badge appears.</p>
                                             </div>
                                         </>
                                     ) : (

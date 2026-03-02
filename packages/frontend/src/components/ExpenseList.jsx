@@ -25,8 +25,8 @@ const ExpenseList = ({ expenses, onDelete }) => {
                             <span className="expense-date">{formatDate(expense.date)}</span>
                         </div>
                         <div className="expense-actions">
-                            <span className="expense-amount">
-                                - {formatCurrency(expense.amount)}
+                            <span className={`expense-amount ${expense.type === 'credit' ? 'credit-amount' : ''}`}>
+                                {expense.type === 'credit' ? '+' : '-'} {formatCurrency(expense.amount)}
                             </span>
                             <button
                                 className="btn-delete"

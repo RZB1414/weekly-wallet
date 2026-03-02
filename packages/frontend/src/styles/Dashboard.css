@@ -594,9 +594,8 @@
 .tx-name {
     font-weight: 600;
     color: #1F2937;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
     font-size: 0.95rem;
     margin-bottom: 2px;
 }
@@ -1418,6 +1417,59 @@
     text-shadow: 0 0 4px rgba(255, 0, 0, 0.3);
     backdrop-filter: blur(4px);
     animation: pulseRedGlow 3s ease-in-out infinite;
+}
+
+/* ── Survival Status Messages ── */
+.survival-status-apocalipse {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    backdrop-filter: blur(6px);
+    transition: all 0.3s ease;
+}
+
+/* ≥ 6 months — Safe & Happy */
+.survival-safe-apocalipse {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    color: #6ee7b7;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15), inset 0 0 12px rgba(16, 185, 129, 0.08);
+}
+
+/* 3–6 months — Tight / Warning */
+.survival-tight-apocalipse {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.15));
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: #fcd34d;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15), inset 0 0 12px rgba(245, 158, 11, 0.08);
+}
+
+/* < 3 months — Zombie Horde */
+@keyframes zombiePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2), inset 0 0 12px rgba(239, 68, 68, 0.1);
+    }
+
+    50% {
+        box-shadow: 0 4px 24px rgba(239, 68, 68, 0.4), inset 0 0 20px rgba(239, 68, 68, 0.2);
+    }
+}
+
+.survival-zombie-apocalipse {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(185, 28, 28, 0.2));
+    border: 1px solid rgba(248, 113, 113, 0.5);
+    color: #fca5a5;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3), 0 1px 2px rgba(0, 0, 0, 0.6);
+    animation: zombiePulse 2s ease-in-out infinite;
 }
 
 /* ── Overrides for children inside the blend card ── */
