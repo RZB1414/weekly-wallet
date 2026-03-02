@@ -489,7 +489,7 @@ const App = () => {
                 />
             </div>
 
-            <div className="history-view-container" style={{ display: currentView !== 'dashboard' && !isAnyModalOpen ? 'block' : 'none' }}>
+            <div className="history-view-container" style={{ display: currentView !== 'dashboard' && !isAnyModalOpen ? 'flex' : 'none' }}>
 
                 {/* Modal-style Header for History */}
                 <div className="history-header">

@@ -1,7 +1,8 @@
 .expense-list-container {
     overflow-y: auto;
     padding: 0.5rem;
-    flex: 1;
+    flex: 1 1 0%;
+    min-height: 0;
     /* Scrollbar styles */
     scrollbar-width: thin;
     scrollbar-color: var(--color-primary) var(--color-bg);

@@ -158,7 +158,7 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
                         style={{
                             width: '100%',
                             maxWidth: '500px',
-                            height: 'fit-content',
+                            height: '100%',
                             display: 'flex',
                             justifyContent: 'center'
                         }}
