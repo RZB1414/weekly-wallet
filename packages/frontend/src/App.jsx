@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Plus } from 'lucide-react';
 import WeekCarousel from './components/WeekCarousel';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
@@ -489,7 +491,7 @@ const App = () => {
                 />
             </div>
 
-            <div className="history-view-container" style={{ display: currentView !== 'dashboard' && !isAnyModalOpen ? 'flex' : 'none' }}>
+            <div className="history-view-container" style={{ display: currentView !== 'dashboard' && !isAnyModalOpen ? 'block' : 'none' }}>
 
                 {/* Modal-style Header for History */}
                 <div className="history-header">
@@ -547,6 +549,15 @@ const App = () => {
                 >
                     Monthly Planning
                 </button>
+
+                <motion.button
+                    className="add-expense-fab-global"
+                    onClick={handleOpenAddExpense}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                >
+                    <Plus size={32} />
+                </motion.button>
 
                 {/* Floating "Go to Current" Button */}
                 {(() => {

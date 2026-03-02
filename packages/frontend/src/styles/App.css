@@ -100,9 +100,8 @@
 .history-view-container {
     height: 100%;
     background-color: var(--color-bg);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 80px;
 }
 
 /* History Header Styling */
@@ -113,7 +112,6 @@
     background-color: var(--color-bg-glass);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    flex-shrink: 0;
 }
 
 .history-header-content {
@@ -147,4 +145,28 @@
 
 .history-filters .glass-select {
     flex: 1;
+}
+
+/* Global Floating Action Button for adding expense */
+.add-expense-fab-global {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.add-expense-fab-global:hover {
+    box-shadow: 0 8px 25px rgba(255, 140, 0, 0.5);
 }

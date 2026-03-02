@@ -216,15 +216,6 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                     })()
                 )}
             </div>
-
-            <motion.button
-                className="add-expense-btn"
-                onClick={onOpenAddExpense}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-            >
-                <Plus size={32} />
-            </motion.button>
         </div>
     );
 };
