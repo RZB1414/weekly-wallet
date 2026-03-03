@@ -175,42 +175,39 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     plansList.plans.map(p => api.getMonthlyPlanning(p.year, p.month))
                 ) : [];
 
-                const totalIncome = allPlansData.reduce((sum, plan) => sum + (plan.salary || 0), 0);
-
-                const sortedWeeks = [...weeks].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-                const startBalance = sortedWeeks.length > 0 ? (sortedWeeks[0].initialBalance || 0) : 0;
-
-                const totalExpenses = weeks.reduce((total, week) => {
-                    return total + week.expenses.reduce((wSum, e) => {
-                        return e.type !== 'credit' ? wSum + Number(e.amount) : wSum;
+                let accumulatedRemainingBalance = 0;
+                allPlansData.forEach(plan => {
+                    const mIncome = plan.salary || 0;
+                    const mBudgets = plan.categories.reduce((sum, c) => {
+                        const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
+                        return sum + monthlyEquivalent;
                     }, 0);
-                }, 0);
+                    accumulatedRemainingBalance += (mIncome - mBudgets);
+                });
 
-                const extraIncome = weeks.reduce((total, week) => {
-                    return total + week.expenses.reduce((wSum, e) => {
-                        return e.type === 'credit' ? wSum + Number(e.amount) : wSum;
-                    }, 0);
-                }, 0);
-
-                const globalNetWorth = totalIncome + extraIncome + startBalance - totalExpenses;
+                const globalNetWorth = accumulatedRemainingBalance + (totalSavings || 0);
 
 
                 let monthlyBurn = 0;
                 let monthlyIncome = 0;
                 let totalBudgets = 0;
+                let latestRemainingBalance = 0;
                 const latestPlanRef = plansList.plans && plansList.plans.length > 0 ? plansList.plans[0] : null;
 
                 if (latestPlanRef) {
                     const latestData = await api.getMonthlyPlanning(latestPlanRef.year, latestPlanRef.month);
                     monthlyIncome = latestData.salary || 0;
-                    monthlyBurn = latestData.categories.reduce((sum, c) => {
-                        const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
-                        return sum + (c.type === 'spend' ? monthlyEquivalent : 0);
-                    }, 0);
+
                     totalBudgets = latestData.categories.reduce((sum, c) => {
                         const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
                         return sum + monthlyEquivalent;
                     }, 0);
+
+                    // Calculation: Remaining Monthly Balance for current month
+                    latestRemainingBalance = monthlyIncome - totalBudgets;
+
+                    // Monthly Burn = Salary - Remaining Monthly Balance
+                    monthlyBurn = monthlyIncome - latestRemainingBalance;
                 }
 
                 if (monthlyBurn === 0 && currentWeekData) {
@@ -306,7 +303,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     wealth: globalNetWorth,
                     daysRunway: daysRunwayStr,
                     isSafe,
-                    raw: { totalIncome, extraIncome, startBalance, totalExpenses, monthlyBurn: burnToUse }
+                    raw: { accumulatedRemainingBalance, totalSavings: totalSavings || 0, monthlyBurn: burnToUse }
                 });
 
                 setOptimisticRunway({
@@ -700,12 +697,12 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                                             <div className="info-step">
                                                 <h3>1. Global Net Worth</h3>
-                                                <p>We calculate your total real wealth by adding: your <strong>initial starting balance</strong> + all <strong>salaries</strong> from every Monthly Plan + any <strong>extra credits</strong> logged in your weeks — then subtracting all <strong>historical expenses</strong> across every week.</p>
+                                                <p>We calculate your total real wealth by adding: the <strong>Remaining Monthly Balance</strong> of all your added months + your total <strong>Savings</strong>.</p>
                                             </div>
 
                                             <div className="info-step">
                                                 <h3>2. Monthly Burn Rate</h3>
-                                                <p>We pull your <strong>latest Monthly Plan</strong> and sum all categories marked as 'spend'. Weekly categories are multiplied by 4 to get a monthly equivalent. If no plan exists, we estimate by multiplying your <strong>current week's spending × 4</strong>.</p>
+                                                <p>We take your <strong>Current Salary</strong> from the latest Monthly Plan and subtract the <strong>Current Remaining Monthly Balance</strong> (Salary - All budgets). If no plan exists, we estimate by multiplying your <strong>current week's spending × 4</strong>.</p>
                                             </div>
 
                                             <div className="info-step">
@@ -719,10 +716,8 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                                             <div style={{ marginBottom: '16px' }}>
                                                 <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Total Cash Pile (Net Worth)</h3>
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
-                                                    <span>+ Start Balance:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.startBalance || 0)}</span>
-                                                    <span>+ Total Income:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.totalIncome || 0)}</span>
-                                                    <span>+ Extra Credits:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.extraIncome || 0)}</span>
-                                                    <span style={{ color: '#EF4444' }}>- Total Expenses:</span> <span style={{ textAlign: 'right', color: '#EF4444' }}>{formatCurrency(realisticRunway.raw?.totalExpenses || 0)}</span>
+                                                    <span>+ Remaining Monthly Balances:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.accumulatedRemainingBalance || 0)}</span>
+                                                    <span>+ Total Savings:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.raw?.totalSavings || 0)}</span>
                                                     <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
                                                     <strong>= Net Worth:</strong> <strong style={{ textAlign: 'right' }}>{formatCurrency(realisticRunway.wealth || 0)}</strong>
                                                 </div>
