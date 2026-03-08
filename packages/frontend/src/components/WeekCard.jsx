@@ -6,7 +6,7 @@ import { formatCurrency, calculateRemaining, getWeekRange, formatDate } from '..
 import { useAuth } from '../lib/AuthContext';
 import '../styles/WeekCard.css';
 
-const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings, onOpenAddExpense }) => {
+const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings, onOpenAddExpense, carryovers }) => {
 
     const handleDeleteExpense = (id) => {
         if (window.confirm("Are you sure you want to delete this expense?")) {
@@ -71,7 +71,9 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
         let label1, val1, label2, val2, val2Class;
         const catExpenses = week.expenses.filter(e => e.category.toLowerCase() === lowerName);
-        const spent = catExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+        const spent = catExpenses.reduce((acc, curr) => {
+            return curr.type === 'credit' ? acc - curr.amount : acc + curr.amount;
+        }, 0);
 
         if (lowerName === 'savings' || lowerName === 'poupança') {
             label1 = 'Saved this month';
@@ -82,18 +84,22 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
             return { label1, val1, label2, val2, val2Class, expenses: catExpenses };
         }
 
-        let displayBudget = budget;
+        let baseBudget = budget;
         if (lowerName === 'market' || lowerName === 'mercado') {
-            displayBudget = isWeekly ? budget : budget / 4;
+            baseBudget = isWeekly ? budget : budget / 4;
             label1 = 'Weekly Budget';
         } else if (lowerName === 'coffee' || lowerName === 'café') {
-            displayBudget = budget;
-            label1 = isWeekly ? 'Weekly Budget' : 'Monthly Budget';
+            baseBudget = isWeekly ? budget : budget / 4;
+            label1 = isWeekly ? 'Weekly Budget' : 'Weekly Eq. Budget';
         } else {
             // Default generic behavior
-            displayBudget = isWeekly ? budget : budget / 4;
+            baseBudget = isWeekly ? budget : budget / 4;
             label1 = isWeekly ? 'Weekly Budget' : 'Weekly Eq. Budget';
         }
+
+        // Add carryovers from previous weeks if this is a weekly budget
+        const carryoverAmount = isWeekly && carryovers ? (carryovers[lowerName] || 0) : 0;
+        const displayBudget = baseBudget + carryoverAmount;
 
         const remaining = displayBudget - spent;
         label2 = 'Remaining';

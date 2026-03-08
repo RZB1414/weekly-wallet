@@ -141,9 +141,9 @@ const App = () => {
 
     // Default categories for new months
     const defaultCategories = [
-        { name: 'Market', budget: 0, type: 'credit' },
-        { name: 'Coffee', budget: 0, type: 'credit' },
-        { name: 'Savings', budget: 0, type: 'credit' },
+        { name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
+        { name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
+        { name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
     ];
 
     // Load Categories for Selected Month
@@ -154,7 +154,19 @@ const App = () => {
             try {
                 const plan = await api.getMonthlyPlanning(selectedYear, selectedMonth);
                 if (plan && plan.categories && plan.categories.length > 0) {
-                    const cats = plan.categories.map(c => typeof c === 'string' ? { name: c, budget: 0 } : c);
+                    const cats = plan.categories.map(c => {
+                        const parsed = typeof c === 'string' ? { name: c, budget: 0, type: 'credit', frequency: 'monthly' } : c;
+
+                        // Enforce Coffee as weekly automatically
+                        let frequency = parsed.frequency || 'monthly';
+                        let budget = parsed.budget || 0;
+                        if ((parsed.name.toLowerCase() === 'coffee' || parsed.name.toLowerCase() === 'café') && frequency !== 'weekly') {
+                            frequency = 'weekly';
+                            budget = budget / 4;
+                        }
+
+                        return { ...parsed, type: parsed.type || 'credit', frequency, budget };
+                    });
                     setActiveCategories(cats);
                 } else {
                     setActiveCategories(defaultCategories);
@@ -579,8 +591,8 @@ const App = () => {
                             }}
                             style={{
                                 position: 'fixed',
-                                bottom: '20px',
-                                right: '25px',
+                                bottom: '80px',
+                                left: '20px',
                                 zIndex: 100,
                                 padding: '12px 24px',
                                 borderRadius: '30px',

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
-import { formatCurrency, getFinancialInfo, getMonthQuarters } from '../lib/utils';
+import { formatCurrency, getFinancialInfo, getMonthQuarters, isWeekCompleted } from '../lib/utils';
 import {
     PieChart, Pie, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
@@ -34,12 +34,36 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         const { quarter } = getFinancialInfo(now);
         const currentWeek = weeks.find(w => w.id === quarter.id);
 
-        const weeklyBudget = categories.reduce((sum, cat) => {
+        let weeklyCategoryCarryover = 0;
+
+        // Generate standard quarters for the current month to find the proper chronological previous week
+        const quarters = getMonthQuarters(now.getFullYear(), now.getMonth() + 1);
+        const currentQIndex = quarters.findIndex(q => q.id === quarter.id);
+
+        if (currentQIndex > 0) {
+            const prevQuarterId = quarters[currentQIndex - 1].id;
+            const prevWeek = weeks.find(w => w.id === prevQuarterId);
+
+            categories.forEach(cat => {
+                if (cat.frequency === 'weekly') {
+                    const cb = cat.budget || 0;
+                    if (prevWeek && isWeekCompleted(prevWeek)) {
+                        const expenses = prevWeek.expenses.filter(e => e.category.toLowerCase() === cat.name.toLowerCase());
+                        const spent = expenses.reduce((s, e) => e.type === 'credit' ? s - Number(e.amount) : s + Number(e.amount), 0);
+                        weeklyCategoryCarryover += (cb - spent);
+                    }
+                }
+            });
+        }
+
+        const baseWeeklyBudget = categories.reduce((sum, cat) => {
             if (cat.frequency === 'weekly') {
                 return sum + (cat.budget || 0);
             }
             return sum + ((cat.budget || 0) / 4);
         }, 0);
+
+        const weeklyBudget = baseWeeklyBudget + weeklyCategoryCarryover;
 
         if (!currentWeek) return { budget: weeklyBudget, spent: 0, balance: weeklyBudget };
 

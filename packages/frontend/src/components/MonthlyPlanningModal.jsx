@@ -85,7 +85,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
 
     const defaultCategories = () => [
         { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
-        { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'monthly' },
+        { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
         { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
     ];
 
@@ -99,7 +99,13 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                 if (typeof cat === 'string') {
                     return { id: Date.now() + Math.random(), name: cat, budget: 0, type: 'credit', frequency: 'monthly' };
                 }
-                return { ...cat, type: cat.type || 'credit', frequency: cat.frequency || 'monthly' }; // Ensure type/frequency exists
+                let frequency = cat.frequency || 'monthly';
+                let budget = cat.budget || 0;
+                if ((cat.name.toLowerCase() === 'coffee' || cat.name.toLowerCase() === 'café') && frequency !== 'weekly') {
+                    frequency = 'weekly';
+                    budget = budget / 4;
+                }
+                return { ...cat, type: cat.type || 'credit', frequency, budget }; // Ensure type/frequency exists
             });
 
             setCategories(loadedCategories.length > 0 ? loadedCategories : defaultCategories());
@@ -123,7 +129,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setView('DETAIL');
         setCategories([
             { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
-            { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'monthly' },
+            { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
             { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
         ]);
         setSalary(0);

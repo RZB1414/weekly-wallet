@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import WeekCard from './WeekCard';
+import { isWeekCompleted } from '../lib/utils';
 import '../styles/WeekCarousel.css';
 
 const variants = {
@@ -163,19 +164,42 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
                             justifyContent: 'center'
                         }}
                     >
-                        {currentWeek && (
-                            <WeekCard
-                                week={currentWeek}
-                                categories={categories}
-                                onUpdateWeek={(updated) => onUpdateWeek(updated)} // Pass just updated week, parent handles index map
-                                onGlobalAddExpense={onGlobalAddExpense} // Pass global handler
-                                weekNumber={activeIndex + 1}
-                                totalWeeks={weeks.length}
-                                totalSavings={totalSavings}
-                                currentMonthSavings={currentMonthSavings}
-                                onOpenAddExpense={onOpenAddExpense}
-                            />
-                        )}
+                        {currentWeek && (() => {
+                            // Calculate carryovers from previous weeks for weekly categories
+                            const carryovers = {};
+                            categories.forEach(cat => {
+                                if (cat.frequency === 'weekly') {
+                                    let accumulatedRemaining = 0;
+                                    const catBudget = cat.budget || 0;
+                                    if (activeIndex > 0) {
+                                        const prevWeek = weeks[activeIndex - 1];
+                                        if (isWeekCompleted(prevWeek)) {
+                                            const catExpenses = prevWeek.expenses.filter(e => e.category.toLowerCase() === cat.name.toLowerCase());
+                                            const spent = catExpenses.reduce((sum, e) => {
+                                                return e.type === 'credit' ? sum - Number(e.amount) : sum + Number(e.amount);
+                                            }, 0);
+                                            accumulatedRemaining = catBudget - spent;
+                                        }
+                                    }
+                                    carryovers[cat.name.toLowerCase()] = accumulatedRemaining;
+                                }
+                            });
+
+                            return (
+                                <WeekCard
+                                    week={currentWeek}
+                                    categories={categories}
+                                    onUpdateWeek={(updated) => onUpdateWeek(updated)} // Pass just updated week, parent handles index map
+                                    onGlobalAddExpense={onGlobalAddExpense} // Pass global handler
+                                    weekNumber={activeIndex + 1}
+                                    totalWeeks={weeks.length}
+                                    totalSavings={totalSavings}
+                                    currentMonthSavings={currentMonthSavings}
+                                    onOpenAddExpense={onOpenAddExpense}
+                                    carryovers={carryovers}
+                                />
+                            );
+                        })()}
                     </motion.div>
                 </AnimatePresence>
             </div>

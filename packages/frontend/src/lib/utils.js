@@ -175,3 +175,18 @@ export const getFinancialInfo = (dateInput) => {
         quarter: foundQuarter
     };
 };
+
+export const isWeekCompleted = (week) => {
+    if (!week) return false;
+    let end;
+    if (week.endDate) {
+        end = new Date(week.endDate);
+    } else if (week.startDate) {
+        end = new Date(week.startDate);
+        end.setDate(end.getDate() + 6);
+    } else {
+        return false;
+    }
+    end.setHours(23, 59, 59, 999);
+    return new Date() > end;
+};
