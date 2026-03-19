@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Settings } from 'lucide-react';
 import ExpenseList from './ExpenseList';
-import { formatCurrency, calculateRemaining, getWeekRange, formatDate } from '../lib/utils';
+import { formatCurrency, calculateRemaining, getWeekRange, formatDate, filterExpensesByCategory, calculateCategoryNet } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
 import '../styles/WeekCard.css';
 
@@ -70,10 +70,8 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
         const lowerName = catName.toLowerCase();
 
         let label1, val1, label2, val2, val2Class;
-        const catExpenses = week.expenses.filter(e => e.category.toLowerCase() === lowerName);
-        const spent = catExpenses.reduce((acc, curr) => {
-            return curr.type === 'credit' ? acc - curr.amount : acc + curr.amount;
-        }, 0);
+        const catExpenses = filterExpensesByCategory(week.expenses, catName);
+        const spent = calculateCategoryNet(week.expenses, catName);
 
         if (lowerName === 'savings' || lowerName === 'poupança') {
             label1 = 'Saved this month';

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "dotenv -e ../../.env -- npx wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"

@@ -117,6 +117,15 @@ npm run start --workspace=packages/backend
 
 ### Environment Variables
 
+#### Root (`.env`)
+
+Used by worker deploy commands so Wrangler always authenticates with the intended Cloudflare account.
+
+```env
+CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+CLOUDFLARE_ACCOUNT_ID=a928f4bf274d697272e1ddf90cb49798
+```
+
 #### Backend (`packages/backend` — Wrangler Secrets)
 
 | Secret | Description |

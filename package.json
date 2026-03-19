@@ -1,6 +1,9 @@
 {
     "name": "weekly-wallet-monorepo",
     "private": true,
+    "devDependencies": {
+        "dotenv-cli": "^8.0.0"
+    },
     "workspaces": [
         "packages/*"
     ],

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
-import { formatCurrency, getFinancialInfo, getMonthQuarters, isWeekCompleted } from '../lib/utils';
+import { formatCurrency, getFinancialInfo, getMonthQuarters, getWeeklyCategoryCarryover } from '../lib/utils';
 import {
     PieChart, Pie, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
@@ -31,30 +31,18 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     const currentWeekData = useMemo(() => {
         if (!weeks || weeks.length === 0) return null;
         const now = new Date();
-        const { quarter } = getFinancialInfo(now);
+        const { year, month, quarter } = getFinancialInfo(now);
         const currentWeek = weeks.find(w => w.id === quarter.id);
 
-        let weeklyCategoryCarryover = 0;
-
         // Generate standard quarters for the current month to find the proper chronological previous week
-        const quarters = getMonthQuarters(now.getFullYear(), now.getMonth() + 1);
+        const quarters = getMonthQuarters(year, month);
         const currentQIndex = quarters.findIndex(q => q.id === quarter.id);
+        const monthWeeks = quarters.map(q => weeks.find(w => w.id === q.id) || { id: q.id, expenses: [], startDate: q.start, endDate: q.end });
 
-        if (currentQIndex > 0) {
-            const prevQuarterId = quarters[currentQIndex - 1].id;
-            const prevWeek = weeks.find(w => w.id === prevQuarterId);
-
-            categories.forEach(cat => {
-                if (cat.frequency === 'weekly') {
-                    const cb = cat.budget || 0;
-                    if (prevWeek && isWeekCompleted(prevWeek)) {
-                        const expenses = prevWeek.expenses.filter(e => e.category.toLowerCase() === cat.name.toLowerCase());
-                        const spent = expenses.reduce((s, e) => e.type === 'credit' ? s - Number(e.amount) : s + Number(e.amount), 0);
-                        weeklyCategoryCarryover += (cb - spent);
-                    }
-                }
-            });
-        }
+        const weeklyCategoryCarryover = categories.reduce((sum, cat) => {
+            if (cat.frequency !== 'weekly') return sum;
+            return sum + getWeeklyCategoryCarryover(monthWeeks, currentQIndex, cat);
+        }, 0);
 
         const baseWeeklyBudget = categories.reduce((sum, cat) => {
             if (cat.frequency === 'weekly') {
@@ -694,16 +682,6 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     </div>
                 </div>
             )}
-
-            <section className="quick-actions-footer">
-                <button className="fab-main" onClick={onAddExpense}>
-                    ➕ Add Expense
-                </button>
-                <div className="secondary-actions">
-                    <button className="btn-small" onClick={onOpenPlanning}>📅 Plan</button>
-                    <button className="btn-small" onClick={() => onNavigate('weeks')}>📊 History</button>
-                </div>
-            </section>
 
             {/* 6. EXPLAINER MODAL */}
             {showRunwayInfo && (

@@ -190,3 +190,168 @@ export const isWeekCompleted = (week) => {
     end.setHours(23, 59, 59, 999);
     return new Date() > end;
 };
+
+export const REFUNDS_CATEGORY_NAME = 'Refunds';
+
+const REFUNDS_CATEGORY_ALIASES = new Set(['refunds', 'refounds']);
+
+export const isRefundsCategory = (categoryName = '') => {
+    return REFUNDS_CATEGORY_ALIASES.has(String(categoryName).trim().toLowerCase());
+};
+
+export const normalizeRefundsCategoryName = (categoryName = '') => {
+    return isRefundsCategory(categoryName) ? REFUNDS_CATEGORY_NAME : categoryName;
+};
+
+export const normalizeRefundExpense = (expense) => {
+    if (!expense) return expense;
+
+    return {
+        ...expense,
+        category: normalizeRefundsCategoryName(expense.category),
+        refundTargetCategory: normalizeRefundsCategoryName(expense.refundTargetCategory)
+    };
+};
+
+export const dedupeRefundExpenses = (expenses = []) => {
+    const normalizedExpenses = expenses.map(expense => normalizeRefundExpense(expense));
+    const consumedExpenseIds = new Set();
+    const dedupedExpenses = [];
+
+    normalizedExpenses.forEach((expense, index) => {
+        if (!expense || consumedExpenseIds.has(expense.id)) {
+            return;
+        }
+
+        if (expense.type === 'credit' && isRefundsCategory(expense.category) && !expense.refundTargetCategory) {
+            const linkedExpense = normalizedExpenses.find((candidate, candidateIndex) => {
+                if (candidateIndex === index || !candidate || consumedExpenseIds.has(candidate.id)) {
+                    return false;
+                }
+
+                return (
+                    candidate.type === 'credit' &&
+                    !isRefundsCategory(candidate.category) &&
+                    candidate.date === expense.date &&
+                    Number(candidate.amount) === Number(expense.amount) &&
+                    candidate.name === `${expense.name} → ${candidate.category}`
+                );
+            });
+
+            if (linkedExpense) {
+                consumedExpenseIds.add(linkedExpense.id);
+                dedupedExpenses.push({
+                    ...expense,
+                    refundTargetCategory: linkedExpense.category
+                });
+                return;
+            }
+        }
+
+        dedupedExpenses.push(expense);
+    });
+
+    return dedupedExpenses;
+};
+
+export const expenseMatchesCategory = (expense, categoryName) => {
+    if (!expense || !categoryName) return false;
+
+    const normalizedCategory = normalizeRefundsCategoryName(categoryName).toLowerCase();
+    const expenseCategory = normalizeRefundsCategoryName(expense.category).toLowerCase();
+    const refundTargetCategory = normalizeRefundsCategoryName(expense.refundTargetCategory).toLowerCase();
+
+    if (expenseCategory === normalizedCategory) {
+        return true;
+    }
+
+    if (
+        expense.type === 'credit' &&
+        isRefundsCategory(expense.category) &&
+        normalizedCategory !== REFUNDS_CATEGORY_NAME.toLowerCase() &&
+        refundTargetCategory === normalizedCategory
+    ) {
+        return true;
+    }
+
+    return false;
+};
+
+export const filterExpensesByCategory = (expenses = [], categoryName) => {
+    return expenses.filter(expense => expenseMatchesCategory(expense, categoryName));
+};
+
+export const calculateCategoryNet = (expenses = [], categoryName) => {
+    return filterExpensesByCategory(expenses, categoryName).reduce((sum, expense) => {
+        return expense.type === 'credit' ? sum - Number(expense.amount) : sum + Number(expense.amount);
+    }, 0);
+};
+
+export const getWeeklyCategoryCarryover = (weeks = [], targetIndex, category) => {
+    if (!category || category.frequency !== 'weekly' || targetIndex <= 0) {
+        return 0;
+    }
+
+    const weeklyBudget = Number(category.budget) || 0;
+    let carryover = 0;
+
+    for (let index = 0; index < targetIndex; index += 1) {
+        const week = weeks[index];
+
+        if (!week || !isWeekCompleted(week)) {
+            carryover = 0;
+            break;
+        }
+
+        const spent = calculateCategoryNet(week.expenses || [], category.name);
+        carryover = weeklyBudget + carryover - spent;
+    }
+
+    return carryover;
+};
+
+export const ensureRefundsCategory = (categories = []) => {
+    const normalizedCategories = categories.map(cat => {
+        if (!cat || !cat.name) return cat;
+
+        return {
+            ...cat,
+            name: normalizeRefundsCategoryName(cat.name)
+        };
+    });
+
+    const hasRefundCategory = normalizedCategories.some(cat => cat && cat.name && isRefundsCategory(cat.name));
+
+    const dedupedCategories = normalizedCategories.filter((cat, index, list) => {
+        if (!cat || !cat.name || !isRefundsCategory(cat.name)) {
+            return true;
+        }
+
+        return list.findIndex(candidate => candidate && candidate.name && isRefundsCategory(candidate.name)) === index;
+    });
+
+    if (hasRefundCategory) {
+        return dedupedCategories.map(cat => {
+            if (cat && cat.name && isRefundsCategory(cat.name)) {
+                return {
+                    ...cat,
+                    name: REFUNDS_CATEGORY_NAME,
+                    type: 'credit',
+                    frequency: cat.frequency || 'monthly',
+                    budget: cat.budget || 0
+                };
+            }
+            return cat;
+        });
+    }
+
+    return [
+        ...dedupedCategories,
+        {
+            name: REFUNDS_CATEGORY_NAME,
+            budget: 0,
+            type: 'credit',
+            frequency: 'monthly'
+        }
+    ];
+};

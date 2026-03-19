@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
-import { getFinancialInfo, getMonthQuarters } from '../lib/utils';
+import { getFinancialInfo, getMonthQuarters, REFUNDS_CATEGORY_NAME, isRefundsCategory } from '../lib/utils';
 import '../styles/AddExpenseModal.css';
 
 const modalVariants = {
@@ -18,6 +18,18 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
     const [category, setCategory] = useState('');
     const [isSplit, setIsSplit] = useState(false);
     const [installments, setInstallments] = useState(2);
+    const [refundTargetCategory, setRefundTargetCategory] = useState('');
+    const refundTargetOptions = React.useMemo(() => {
+        const seen = new Set();
+        return categories
+            .map(cat => cat?.trim())
+            .filter(name => name && !isRefundsCategory(name) && name !== 'Uncategorized')
+            .filter(name => {
+                if (seen.has(name)) return false;
+                seen.add(name);
+                return true;
+            });
+    }, [categories]);
 
     // Calculate remaining weeks for splitting
     const getRemainingQuarters = () => {
@@ -52,18 +64,51 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date, isSplit]); // Removed installments from deps to avoid loop and force update on date change
 
+    React.useEffect(() => {
+        if (category === REFUNDS_CATEGORY_NAME && type !== 'credit') {
+            setType('credit');
+        }
+    }, [category, type]);
+
+    React.useEffect(() => {
+        if (category === REFUNDS_CATEGORY_NAME) {
+            if (refundTargetOptions.length === 0) {
+                setRefundTargetCategory('');
+            } else {
+                setRefundTargetCategory(prev => (prev && refundTargetOptions.includes(prev) ? prev : refundTargetOptions[0]));
+            }
+        } else if (refundTargetCategory) {
+            setRefundTargetCategory('');
+        }
+    }, [category, refundTargetOptions, refundTargetCategory]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name || !amount) return;
 
-        // If split is enabled
-        if (isSplit && type === 'expense' && installments > 1) {
+        const parsedAmount = parseFloat(amount);
+        if (Number.isNaN(parsedAmount)) return;
+
+        if (category === REFUNDS_CATEGORY_NAME) {
+            if (refundTargetOptions.length === 0 || !refundTargetCategory) return;
+
+            const baseName = name.trim() || 'Refund';
+            const refundEntry = {
+                id: uuidv4(),
+                name: baseName,
+                amount: parsedAmount,
+                date,
+                type: 'credit',
+                category: REFUNDS_CATEGORY_NAME,
+                refundTargetCategory
+            };
+            onAdd(refundEntry);
+        } else if (isSplit && type === 'expense' && installments > 1) {
             const expensesToAdd = [];
-            const splitAmount = parseFloat(amount) / installments;
+            const splitAmount = parsedAmount / installments;
             const startDateObj = new Date(date);
 
             for (let i = 0; i < installments; i++) {
-                // Calculate date for this installment (add 7 days * i)
                 const installmentDate = new Date(startDateObj);
                 installmentDate.setDate(startDateObj.getDate() + (i * 7));
 
@@ -81,7 +126,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
             onAdd({
                 id: uuidv4(),
                 name,
-                amount: parseFloat(amount),
+                amount: parsedAmount,
                 date,
                 type,
                 category: category || 'Uncategorized'
@@ -92,21 +137,24 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
         setAmount('');
         setType('expense');
         setCategory('');
+        setRefundTargetCategory('');
         setIsSplit(false);
         onClose();
     };
+
+    const disableSave = category === REFUNDS_CATEGORY_NAME && refundTargetOptions.length === 0;
 
     return (
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    className="modal-overlay"
+                    className="add-tx-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                 >
                     <motion.div
-                        className="modal-content"
+                        className="add-tx-content"
                         variants={modalVariants}
                         initial="hidden"
                         animate="visible"
@@ -115,7 +163,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                         <h2>Add Transaction</h2>
                         <form onSubmit={handleSubmit}>
                             {/* Type Toggle */}
-                            <div className="form-group" style={{ flexDirection: 'row', gap: '10px' }}>
+                            <div className="type-toggle-container">
                                 <button
                                     type="button"
                                     className={`type-btn expense ${type === 'expense' ? 'active' : ''}`}
@@ -144,11 +192,12 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                             </div>
 
                             {type === 'expense' && (
-                                <div className="form-group checkbox-group" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className="form-group">
+                                    <div className="split-checkbox-wrapper">
                                         <input
                                             type="checkbox"
                                             id="split-expense"
+                                            className="split-checkbox"
                                             checked={isSplit}
                                             onChange={(e) => {
                                                 const checked = e.target.checked;
@@ -158,26 +207,18 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                                     setInstallments(remaining > 0 ? remaining : 1);
                                                 }
                                             }}
-                                            style={{ width: 'auto', margin: 0 }}
                                         />
-                                        <label htmlFor="split-expense" style={{ margin: 0, fontWeight: 'normal' }}>
+                                        <label htmlFor="split-expense" className="split-label">
                                             Split expense
                                         </label>
                                     </div>
 
                                     {isSplit && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '25px', width: '100%' }}>
-                                            <span style={{ fontSize: '0.9rem', color: '#ccc' }}>Over</span>
+                                        <div className="split-controls">
+                                            <span>Over</span>
                                             <select
                                                 value={installments}
                                                 onChange={e => setInstallments(parseInt(e.target.value))}
-                                                style={{
-                                                    padding: '5px',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #ccc',
-                                                    background: 'white',
-                                                    color: 'black'
-                                                }}
                                             >
                                                 {Array.from({ length: getRemainingQuarters().length }, (_, i) => i + 1)
                                                     .map(num => (
@@ -185,7 +226,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                                     ))
                                                 }
                                             </select>
-                                            <span style={{ fontSize: '0.9rem', color: '#ccc' }}>weeks</span>
+                                            <span>weeks</span>
                                         </div>
                                     )}
                                 </div>
@@ -218,6 +259,31 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                 </select>
                             </div>
 
+                            {type === 'credit' && category === REFUNDS_CATEGORY_NAME && (
+                                <div className="form-group">
+                                    <label>Apply credit to</label>
+                                    <select
+                                        value={refundTargetCategory}
+                                        onChange={(e) => setRefundTargetCategory(e.target.value)}
+                                        disabled={refundTargetOptions.length === 0}
+                                    >
+                                        <option value="" disabled>
+                                            {refundTargetOptions.length === 0 ? 'No categories available yet' : 'Select target category'}
+                                        </option>
+                                        {refundTargetOptions.map((target) => (
+                                            <option key={target} value={target} style={{ color: 'black' }}>
+                                                {target}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <small style={{ display: 'block', marginTop: '4px', color: refundTargetOptions.length === 0 ? '#f87171' : '#4ade80' }}>
+                                        {refundTargetOptions.length === 0
+                                            ? 'Create a budget category before logging refunds.'
+                                            : 'Adds a credit to the selected category plus tracks the refund under Refunds.'}
+                                    </small>
+                                </div>
+                            )}
+
                             <div className="form-group">
                                 <label>Date</label>
                                 <input
@@ -229,7 +295,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
 
                             <div className="modal-actions">
                                 <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
-                                <button type="submit" className="btn-save">Save</button>
+                                <button type="submit" className="btn-save" disabled={disableSave}>Save</button>
                             </div>
                         </form>
                     </motion.div>

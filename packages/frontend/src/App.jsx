@@ -6,7 +6,7 @@ import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import { useAuth } from './lib/AuthContext';
 import { api } from './lib/api';
-import { getWeekId, getMonthQuarters, findCurrentWeekIndex, getFinancialInfo } from './lib/utils';
+import { getWeekId, getMonthQuarters, findCurrentWeekIndex, getFinancialInfo, ensureRefundsCategory, normalizeRefundExpense, calculateCategoryNet, dedupeRefundExpenses } from './lib/utils';
 import './styles/App.css';
 import './styles/LoginPage.css';
 
@@ -14,6 +14,21 @@ import MonthlyPlanningModal from './components/MonthlyPlanningModal';
 import AddExpenseModal from './components/AddExpenseModal';
 import Dashboard from './components/Dashboard';
 import UserGuide from './components/UserGuide';
+
+const BASE_DEFAULT_CATEGORIES = [
+    { name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
+    { name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
+    { name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' }
+];
+
+const getDefaultCategories = () => ensureRefundsCategory(BASE_DEFAULT_CATEGORIES.map(cat => ({ ...cat })));
+
+const normalizeWeeksRefunds = (weeks = []) => {
+    return weeks.map(week => ({
+        ...week,
+        expenses: dedupeRefundExpenses((week.expenses || []).map(expense => normalizeRefundExpense(expense)))
+    }));
+};
 
 const App = () => {
     const { user, loading: authLoading, logout, changePassword, updateAvatar } = useAuth();
@@ -98,7 +113,7 @@ const App = () => {
     const [weeks, setWeeks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isMonthlyPlanningOpen, setIsMonthlyPlanningOpen] = useState(false);
-    const [activeCategories, setActiveCategories] = useState([]);
+    const [activeCategories, setActiveCategories] = useState(() => getDefaultCategories());
 
     // Date Filter State
     const currentDate = new Date();
@@ -120,7 +135,7 @@ const App = () => {
             try {
                 const data = await api.getWeeks();
                 if (data.weeks && data.weeks.length > 0) {
-                    setWeeks(data.weeks);
+                    setWeeks(normalizeWeeksRefunds(data.weeks));
                 } else {
                     const currentWeekId = getWeekId(new Date());
                     setWeeks([{
@@ -138,13 +153,6 @@ const App = () => {
         };
         loadData();
     }, [user]);
-
-    // Default categories for new months
-    const defaultCategories = [
-        { name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
-        { name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
-        { name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
-    ];
 
     // Load Categories for Selected Month
     useEffect(() => {
@@ -167,13 +175,13 @@ const App = () => {
 
                         return { ...parsed, type: parsed.type || 'credit', frequency, budget };
                     });
-                    setActiveCategories(cats);
+                    setActiveCategories(ensureRefundsCategory(cats));
                 } else {
-                    setActiveCategories(defaultCategories);
+                    setActiveCategories(getDefaultCategories());
                 }
             } catch (error) {
                 console.error("Failed to load planning", error);
-                setActiveCategories(defaultCategories);
+                setActiveCategories(getDefaultCategories());
             }
         };
         loadPlanning();
@@ -268,12 +276,7 @@ const App = () => {
         if (!weeks) return 0;
         const expenseSavings = weeks.reduce((total, week) => {
             if (!week.expenses) return total;
-            const weekSavings = week.expenses
-                .filter(e => e.category.toLowerCase() === 'savings' || e.category.toLowerCase() === 'poupança')
-                .reduce((sum, e) => {
-                    // Credit = Deposit (Add), Expense = Withdrawal (Subtract)
-                    return e.type === 'credit' ? sum + e.amount : sum - e.amount;
-                }, 0);
+            const weekSavings = -calculateCategoryNet(week.expenses, 'Savings');
             return total + weekSavings;
         }, 0);
 
@@ -326,21 +329,32 @@ const App = () => {
     // ── Browser History Navigation ──────────────────
     // Wrap state setters to push/pop history entries for back gesture support
     const setCurrentView = useCallback((view) => {
-        if (view !== 'dashboard') {
-            window.history.pushState({ view }, '');
-        }
-        setCurrentViewRaw(view);
+        setCurrentViewRaw((previousView) => {
+            if (previousView === view) {
+                return previousView;
+            }
+
+            if (view !== 'dashboard') {
+                window.history.pushState({ view }, '');
+            }
+
+            return view;
+        });
     }, []);
 
     const setIsAddExpenseModalOpen = useCallback((open) => {
-        if (open) window.history.pushState({ modal: 'addExpense' }, '');
+        if (open && !isAddExpenseModalOpen) {
+            window.history.pushState({ modal: 'addExpense' }, '');
+        }
         setIsAddExpenseModalOpenRaw(open);
-    }, []);
+    }, [isAddExpenseModalOpen]);
 
     const openMonthlyPlanning = useCallback(() => {
-        window.history.pushState({ modal: 'planning' }, '');
+        if (!isMonthlyPlanningOpen) {
+            window.history.pushState({ modal: 'planning' }, '');
+        }
         setIsMonthlyPlanningOpen(true);
-    }, []);
+    }, [isMonthlyPlanningOpen]);
 
     const closeMonthlyPlanning = useCallback(() => {
         setIsMonthlyPlanningOpen(false);
@@ -390,6 +404,33 @@ const App = () => {
         setIsAddExpenseModalOpen(false);
     };
 
+    const handleQuickAction = useCallback((action) => {
+        switch (action) {
+            case 'dashboard':
+                setIsMonthlyPlanningOpen(false);
+                setIsAddExpenseModalOpenRaw(false);
+                setCurrentView('dashboard');
+                break;
+            case 'weeks':
+                setIsMonthlyPlanningOpen(false);
+                setIsAddExpenseModalOpenRaw(false);
+                setCurrentView('weeks');
+                break;
+            case 'plan':
+                setCurrentViewRaw('dashboard');
+                setIsAddExpenseModalOpenRaw(false);
+                openMonthlyPlanning();
+                break;
+            case 'add-expense':
+                setCurrentViewRaw('dashboard');
+                setIsMonthlyPlanningOpen(false);
+                setIsAddExpenseModalOpen(true);
+                break;
+            default:
+                break;
+        }
+    }, [openMonthlyPlanning, setCurrentView, setIsAddExpenseModalOpen]);
+
     const onAddExpense = (expense) => {
         handleGlobalAddExpense(expense);
         setIsAddExpenseModalOpen(false);
@@ -427,6 +468,8 @@ const App = () => {
     }
 
     const isAnyModalOpen = isMonthlyPlanningOpen || isAddExpenseModalOpen;
+    const isAnyBlockingModalOpen = isAddExpenseModalOpen;
+    const isQuickActionsHidden = isAnyBlockingModalOpen || showUserGuide || showChangePwd || showAvatarGallery || showUserMenu;
 
     return (
         <div className="app-container">
@@ -490,8 +533,7 @@ const App = () => {
                 </div>
             )}
 
-            {/* Always mount Dashboard but hide it when not active to prevent remounting/recalc */}
-            <div style={{ display: currentView === 'dashboard' ? 'block' : 'none', height: '100%' }}>
+            {currentView === 'dashboard' && (
                 <Dashboard
                     weeks={weeks}
                     categories={activeCategories}
@@ -501,7 +543,7 @@ const App = () => {
                     onOpenPlanning={openMonthlyPlanning}
                     onToggleMenu={() => setShowUserMenu(!showUserMenu)}
                 />
-            </div>
+            )}
 
             <div className="history-view-container" style={{ display: currentView !== 'dashboard' && !isAnyModalOpen ? 'block' : 'none' }}>
 
@@ -728,6 +770,44 @@ const App = () => {
 
             {/* User Guide */}
             <UserGuide isOpen={showUserGuide} onClose={() => setShowUserGuide(false)} />
+
+            <section
+                className={`quick-actions-footer ${isQuickActionsHidden ? 'is-hidden' : ''} ${isMonthlyPlanningOpen ? 'is-plan-open' : ''}`.trim()}
+                aria-label="Primary navigation"
+                aria-hidden={isQuickActionsHidden}
+            >
+                <button
+                    type="button"
+                    className={`quick-action-btn ${currentView === 'dashboard' && !isMonthlyPlanningOpen ? 'active' : ''}`}
+                    onClick={() => handleQuickAction('dashboard')}
+                    aria-pressed={currentView === 'dashboard' && !isMonthlyPlanningOpen}
+                >
+                    Dashboard
+                </button>
+                <button
+                    type="button"
+                    className={`quick-action-btn ${currentView === 'weeks' ? 'active' : ''}`}
+                    onClick={() => handleQuickAction('weeks')}
+                    aria-pressed={currentView === 'weeks'}
+                >
+                    Week
+                </button>
+                <button
+                    type="button"
+                    className={`quick-action-btn ${isMonthlyPlanningOpen ? 'active' : ''}`}
+                    onClick={() => handleQuickAction('plan')}
+                    aria-pressed={isMonthlyPlanningOpen}
+                >
+                    Plan
+                </button>
+                <button
+                    className="quick-action-btn quick-action-btn-primary"
+                    type="button"
+                    onClick={() => handleQuickAction('add-expense')}
+                >
+                    Add Expense
+                </button>
+            </section>
         </div>
     );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../styles/MonthlyPlanning.css';
 import { api } from '../lib/api';
-import { getFinancialInfo } from '../lib/utils';
+import { getFinancialInfo, ensureRefundsCategory, filterExpensesByCategory, calculateCategoryNet, normalizeRefundExpense } from '../lib/utils';
 
 const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPlanSave }) => {
     // View State: 'LIST' | 'DETAIL'
@@ -63,7 +63,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                     const { month, year } = getFinancialInfo(exp.date);
 
                     if (year === selectedYear && month === selectedMonth) {
-                        relevantExpenses.push(exp);
+                        relevantExpenses.push(normalizeRefundExpense(exp));
                     }
                 });
             }
@@ -83,11 +83,19 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         }
     };
 
-    const defaultCategories = () => [
+    const basePlanningCategories = () => [
         { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
         { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
         { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
     ];
+
+    const defaultCategories = () => ensureRefundsCategory(basePlanningCategories()).map(cat => ({
+        ...cat,
+        id: cat.id || crypto.randomUUID(),
+        frequency: cat.frequency || 'monthly',
+        type: cat.type || 'credit',
+        budget: cat.budget || 0
+    }));
 
     const loadData = async () => {
         setIsLoading(true);
@@ -108,7 +116,15 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                 return { ...cat, type: cat.type || 'credit', frequency, budget }; // Ensure type/frequency exists
             });
 
-            setCategories(loadedCategories.length > 0 ? loadedCategories : defaultCategories());
+            const normalizedCategories = ensureRefundsCategory(loadedCategories).map(cat => ({
+                ...cat,
+                id: cat.id || crypto.randomUUID(),
+                frequency: cat.frequency || 'monthly',
+                type: cat.type || 'credit',
+                budget: cat.budget || 0
+            }));
+
+            setCategories(normalizedCategories.length > 0 ? normalizedCategories : defaultCategories());
             setSalary(data.salary || 0);
             setSalaryInput(data.salary ? data.salary.toString() : '');
         } catch (error) {
@@ -127,11 +143,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setSelectedMonth(now.getMonth() + 1);
         setIsEditing(true);
         setView('DETAIL');
-        setCategories([
-            { id: crypto.randomUUID(), name: 'Market', budget: 0, type: 'credit', frequency: 'monthly' },
-            { id: crypto.randomUUID(), name: 'Coffee', budget: 0, type: 'credit', frequency: 'weekly' },
-            { id: crypto.randomUUID(), name: 'Savings', budget: 0, type: 'credit', frequency: 'monthly' },
-        ]);
+        setCategories(defaultCategories());
         setSalary(0);
         setSalaryInput('');
     };
@@ -267,10 +279,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
 
     // Helper to calculate spent per category
     const getCategorySpent = (catName) => {
-        const catExpenses = monthlyExpenses.filter(e => e.category === catName);
-        return catExpenses.reduce((sum, e) => {
-            return e.type === 'credit' ? sum - e.amount : sum + e.amount;
-        }, 0);
+        return calculateCategoryNet(monthlyExpenses, catName);
     };
 
     // Calculations
@@ -317,7 +326,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             monthlyBudget,
             spent,
             remaining: monthlyBudget - spent,
-            expenses: monthlyExpenses.filter(e => e.category === cat.name)
+            expenses: filterExpensesByCategory(monthlyExpenses, cat.name)
         };
     });
 

@@ -102,7 +102,7 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     /* Momentum scrolling for iOS */
-    padding-bottom: 80px;
+    padding-bottom: 132px;
 }
 
 /* History Header Styling */
@@ -157,11 +157,11 @@
     height: 56px;
     border-radius: 50%;
     position: fixed;
-    bottom: 20px;
+    bottom: 120px;
     right: 20px;
     box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
     cursor: pointer;
-    z-index: 100;
+    z-index: 110;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -170,4 +170,151 @@
 
 .add-expense-fab-global:hover {
     box-shadow: 0 8px 25px rgba(255, 140, 0, 0.5);
+}
+
+@media (max-width: 960px) {
+    .add-expense-fab-global {
+        bottom: 140px;
+    }
+}
+
+/* Floating navigation tray shared across the app */
+.quick-actions-footer {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    bottom: 24px;
+    transform: translateX(-50%);
+    width: min(760px, calc(100% - 32px));
+    border-radius: 28px;
+    padding: 10px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 248, 232, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 25px 65px -18px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(32px) saturate(180%);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 10px;
+    z-index: 900;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.quick-actions-footer.is-plan-open {
+    z-index: 1101;
+}
+
+.quick-actions-footer:focus-within {
+    box-shadow: 0 25px 70px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.quick-actions-footer.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(18px);
+}
+
+.quick-action-btn {
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 20px;
+    padding: 12px 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.quick-action-btn:hover {
+    border-color: rgba(148, 163, 184, 0.45);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-2px);
+}
+
+.quick-action-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 12px 30px rgba(244, 114, 17, 0.45);
+}
+
+.quick-action-btn.active:hover,
+.quick-action-btn.active:focus-visible {
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 12px 30px rgba(244, 114, 17, 0.45);
+}
+
+.quick-action-btn:focus-visible {
+    outline: 2px solid rgba(148, 163, 184, 0.55);
+    outline-offset: 2px;
+}
+
+.quick-action-btn.active:focus-visible {
+    outline-color: rgba(255, 140, 0, 0.8);
+}
+
+.quick-action-btn-primary {
+    background: rgba(255, 255, 255, 0.82);
+    color: #c76a00;
+    border-color: rgba(245, 158, 11, 0.42);
+    font-family: var(--font-display);
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
+}
+
+.quick-action-btn-primary:hover,
+.quick-action-btn-primary:focus-visible {
+    transform: translateY(-2px);
+    color: #b85f00;
+    border-color: rgba(217, 119, 6, 0.55);
+    box-shadow: 0 12px 24px rgba(217, 119, 6, 0.12), inset 0 0 0 1px rgba(245, 158, 11, 0.14);
+}
+
+.quick-action-btn-primary:focus-visible {
+    outline-color: rgba(255, 140, 0, 0.45);
+}
+
+@media (max-width: 960px) {
+    .quick-actions-footer {
+        width: calc(100% - 24px);
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        border-radius: 22px 22px 0 0;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    }
+    .quick-action-btn {
+        padding: 11px 8px;
+        font-size: 0.82rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .history-view-container {
+        padding-bottom: 120px;
+    }
+    .quick-actions-footer {
+        width: calc(100% - 12px);
+        gap: 8px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .quick-action-btn {
+        font-size: 0.74rem;
+        letter-spacing: -0.01em;
+        padding: 10px 6px;
+    }
+    .add-expense-fab-global {
+        display: none;
+    }
 }

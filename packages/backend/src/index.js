@@ -75,6 +75,156 @@ async function encryptedPut(bucket, key, data, dek) {
   await bucket.put(key, encrypted)
 }
 
+const REFUNDS_CATEGORY_NAME = 'Refunds'
+const REFUNDS_CATEGORY_ALIASES = new Set(['refunds', 'refounds'])
+
+function isRefundsCategory(categoryName = '') {
+  return REFUNDS_CATEGORY_ALIASES.has(String(categoryName).trim().toLowerCase())
+}
+
+function normalizeRefundsCategoryName(categoryName = '') {
+  return isRefundsCategory(categoryName) ? REFUNDS_CATEGORY_NAME : categoryName
+}
+
+function normalizeRefundExpense(expense) {
+  if (!expense) return expense
+
+  return {
+    ...expense,
+    category: normalizeRefundsCategoryName(expense.category),
+    refundTargetCategory: normalizeRefundsCategoryName(expense.refundTargetCategory),
+  }
+}
+
+function dedupeRefundExpenses(expenses = []) {
+  const normalizedExpenses = expenses.map((expense) => normalizeRefundExpense(expense))
+  const consumedExpenseIds = new Set()
+  const dedupedExpenses = []
+
+  normalizedExpenses.forEach((expense, index) => {
+    if (!expense || consumedExpenseIds.has(expense.id)) {
+      return
+    }
+
+    if (expense.type === 'credit' && isRefundsCategory(expense.category) && !expense.refundTargetCategory) {
+      const linkedExpense = normalizedExpenses.find((candidate, candidateIndex) => {
+        if (candidateIndex === index || !candidate || consumedExpenseIds.has(candidate.id)) {
+          return false
+        }
+
+        return (
+          candidate.type === 'credit' &&
+          !isRefundsCategory(candidate.category) &&
+          candidate.date === expense.date &&
+          Number(candidate.amount) === Number(expense.amount) &&
+          candidate.name === `${expense.name} → ${candidate.category}`
+        )
+      })
+
+      if (linkedExpense) {
+        consumedExpenseIds.add(linkedExpense.id)
+        dedupedExpenses.push({
+          ...expense,
+          refundTargetCategory: linkedExpense.category,
+        })
+        return
+      }
+    }
+
+    dedupedExpenses.push(expense)
+  })
+
+  return dedupedExpenses
+}
+
+function normalizeWeeksData(payload = {}) {
+  return {
+    ...payload,
+    weeks: Array.isArray(payload.weeks)
+      ? payload.weeks.map((week) => ({
+          ...week,
+          expenses: Array.isArray(week?.expenses)
+            ? dedupeRefundExpenses(week.expenses)
+            : [],
+        }))
+      : [],
+  }
+}
+
+function normalizeMonthlyPlanningData(payload = {}) {
+  const normalizedCategories = Array.isArray(payload.categories)
+    ? payload.categories.map((category) => {
+        if (typeof category === 'string') {
+          return normalizeRefundsCategoryName(category)
+        }
+
+        if (!category || typeof category !== 'object') {
+          return category
+        }
+
+        return {
+          ...category,
+          name: normalizeRefundsCategoryName(category.name),
+        }
+      })
+    : []
+
+  const dedupedCategories = normalizedCategories.filter((category, index, list) => {
+    const categoryName = typeof category === 'string' ? category : category?.name
+
+    if (!isRefundsCategory(categoryName)) {
+      return true
+    }
+
+    return list.findIndex((candidate) => {
+      const candidateName = typeof candidate === 'string' ? candidate : candidate?.name
+      return isRefundsCategory(candidateName)
+    }) === index
+  })
+
+  const hasRefundsCategory = dedupedCategories.some((category) => {
+    const categoryName = typeof category === 'string' ? category : category?.name
+    return isRefundsCategory(categoryName)
+  })
+
+  if (!hasRefundsCategory) {
+    dedupedCategories.push({
+      name: REFUNDS_CATEGORY_NAME,
+      budget: 0,
+      type: 'credit',
+      frequency: 'monthly',
+    })
+  }
+
+  return {
+    ...payload,
+    categories: dedupedCategories.map((category) => {
+      if (typeof category === 'string') {
+        return normalizeRefundsCategoryName(category)
+      }
+
+      if (!category || typeof category !== 'object') {
+        return category
+      }
+
+      if (isRefundsCategory(category.name)) {
+        return {
+          ...category,
+          name: REFUNDS_CATEGORY_NAME,
+          type: 'credit',
+          frequency: category.frequency || 'monthly',
+          budget: category.budget || 0,
+        }
+      }
+
+      return category
+    }),
+    expenses: Array.isArray(payload.expenses)
+      ? dedupeRefundExpenses(payload.expenses)
+      : [],
+  }
+}
+
 // ──────────────────────────────────────────────
 // GET /api/weeks
 // ──────────────────────────────────────────────
@@ -85,7 +235,13 @@ app.get('/api/weeks', async (c) => {
   try {
     const dek = await getUserDEK(c)
     const data = await encryptedGet(bucket, `${userId}/weeks-data.json`, dek)
-    return c.json(data || { weeks: [] })
+    const normalizedData = normalizeWeeksData(data || { weeks: [] })
+
+    if (data && JSON.stringify(data) !== JSON.stringify(normalizedData)) {
+      await encryptedPut(bucket, `${userId}/weeks-data.json`, normalizedData, dek)
+    }
+
+    return c.json(normalizedData)
   } catch (err) {
     console.error('Error reading weeks:', err)
     return c.json({ weeks: [] })
@@ -102,7 +258,7 @@ app.post('/api/weeks', async (c) => {
 
   try {
     const dek = await getUserDEK(c)
-    await encryptedPut(bucket, `${userId}/weeks-data.json`, body, dek)
+    await encryptedPut(bucket, `${userId}/weeks-data.json`, normalizeWeeksData(body), dek)
     return c.json({ success: true })
   } catch (err) {
     console.error('Error saving weeks:', err)
@@ -125,7 +281,18 @@ app.get('/api/monthly-planning/:year/:month', async (c) => {
       `${userId}/monthly-planning-${year}-${month}.json`,
       dek
     )
-    return c.json(data || { categories: [], expenses: [], salary: 0 })
+    const normalizedData = normalizeMonthlyPlanningData(data || { categories: [], expenses: [], salary: 0 })
+
+    if (data && JSON.stringify(data) !== JSON.stringify(normalizedData)) {
+      await encryptedPut(
+        bucket,
+        `${userId}/monthly-planning-${year}-${month}.json`,
+        normalizedData,
+        dek
+      )
+    }
+
+    return c.json(normalizedData)
   } catch (err) {
     console.error('Error reading monthly planning:', err)
     return c.json({ categories: [], expenses: [], salary: 0 })
@@ -146,7 +313,7 @@ app.post('/api/monthly-planning/:year/:month', async (c) => {
     await encryptedPut(
       bucket,
       `${userId}/monthly-planning-${year}-${month}.json`,
-      body,
+      normalizeMonthlyPlanningData(body),
       dek
     )
     return c.json({ success: true })
