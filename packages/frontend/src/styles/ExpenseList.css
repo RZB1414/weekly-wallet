@@ -49,6 +49,18 @@
     color: var(--color-text-secondary);
 }
 
+.expense-category-label {
+    display: inline-flex;
+    margin-top: 0.45rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    color: var(--color-text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.6rem;
+    font-weight: 500;
+    width: fit-content;
+}
+
 .expense-amount {
     font-family: var(--font-display);
     font-weight: 700;
@@ -71,6 +83,7 @@
     margin-left: 0.5rem;
 }
 
+.btn-edit,
 .btn-delete {
     background: transparent;
     border: none;
@@ -79,6 +92,11 @@
     padding: 0.5rem;
     transition: color 0.2s;
     border-radius: 50%;
+}
+
+.btn-edit:hover {
+    color: var(--color-primary);
+    background: rgba(255, 140, 0, 0.12);
 }
 
 .btn-delete:hover {

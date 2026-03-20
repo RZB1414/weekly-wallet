@@ -114,6 +114,7 @@ const App = () => {
     const [loading, setLoading] = useState(true);
     const [isMonthlyPlanningOpen, setIsMonthlyPlanningOpen] = useState(false);
     const [activeCategories, setActiveCategories] = useState(() => getDefaultCategories());
+    const [editingExpense, setEditingExpense] = useState(null);
 
     // Date Filter State
     const currentDate = new Date();
@@ -397,12 +398,19 @@ const App = () => {
     }, [currentView, isAddExpenseModalOpen, isMonthlyPlanningOpen, showChangePwd, showUserMenu, showUserGuide]);
 
     const handleOpenAddExpense = () => {
+        setEditingExpense(null);
         setIsAddExpenseModalOpen(true);
     };
 
     const handleCloseAddExpense = () => {
+        setEditingExpense(null);
         setIsAddExpenseModalOpen(false);
     };
+
+    const handleOpenEditExpense = useCallback((expense) => {
+        setEditingExpense(expense);
+        setIsAddExpenseModalOpen(true);
+    }, [setIsAddExpenseModalOpen]);
 
     const handleQuickAction = useCallback((action) => {
         switch (action) {
@@ -433,8 +441,47 @@ const App = () => {
 
     const onAddExpense = (expense) => {
         handleGlobalAddExpense(expense);
+        setEditingExpense(null);
         setIsAddExpenseModalOpen(false);
     };
+
+    const onSaveExpense = useCallback((updatedExpense) => {
+        const { quarter } = getFinancialInfo(updatedExpense.date);
+        const targetWeekId = quarter.id;
+
+        setWeeks(prevWeeks => {
+            const weeksWithoutExpense = prevWeeks.map((week) => ({
+                ...week,
+                expenses: (week.expenses || []).filter((expense) => expense.id !== updatedExpense.id)
+            }));
+
+            const targetWeekIndex = weeksWithoutExpense.findIndex((week) => week.id === targetWeekId);
+
+            if (targetWeekIndex !== -1) {
+                const targetWeek = weeksWithoutExpense[targetWeekIndex];
+                weeksWithoutExpense[targetWeekIndex] = {
+                    ...targetWeek,
+                    expenses: [...targetWeek.expenses, updatedExpense]
+                };
+                return weeksWithoutExpense;
+            }
+
+            return [
+                ...weeksWithoutExpense,
+                {
+                    id: targetWeekId,
+                    startDate: quarter.start,
+                    endDate: quarter.end,
+                    initialBalance: 0,
+                    expenses: [updatedExpense],
+                    isQuarter: true
+                }
+            ];
+        });
+
+        setEditingExpense(null);
+        setIsAddExpenseModalOpen(false);
+    }, [setIsAddExpenseModalOpen]);
 
     // ── Render ────────────────────────────────────
 
@@ -590,19 +637,13 @@ const App = () => {
                     categories={activeCategories}
                     onUpdateWeek={(updatedWeek) => handleUpdateWeek(updatedWeek)}
                     onGlobalAddExpense={handleGlobalAddExpense}
+                    onEditExpense={handleOpenEditExpense}
                     onCreateWeek={handleCreateWeek}
                     activeIndex={activeIndex}
                     onIndexChange={setActiveIndex}
                     totalSavings={totalSavings}
                     onOpenAddExpense={handleOpenAddExpense}
                 />
-
-                <button
-                    className="monthly-planning-btn"
-                    onClick={openMonthlyPlanning}
-                >
-                    Monthly Planning
-                </button>
 
                 <motion.button
                     className="add-expense-fab-global"
@@ -673,6 +714,8 @@ const App = () => {
                 isOpen={isAddExpenseModalOpen}
                 onClose={handleCloseAddExpense}
                 onAdd={onAddExpense}
+                onSave={onSaveExpense}
+                initialExpense={editingExpense}
                 categories={activeCategories.map(c => c.name)}
             />
 

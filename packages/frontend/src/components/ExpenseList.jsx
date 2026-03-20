@@ -1,10 +1,21 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils';
 import '../styles/ExpenseList.css';
 
-const ExpenseList = ({ expenses, onDelete }) => {
+const ExpenseList = ({ expenses, onDelete, onEdit }) => {
+    const sortedExpenses = [...expenses].sort((leftExpense, rightExpense) => {
+        const leftDate = new Date(leftExpense.date).getTime();
+        const rightDate = new Date(rightExpense.date).getTime();
+
+        if (leftDate !== rightDate) {
+            return rightDate - leftDate;
+        }
+
+        return (rightExpense.id || '').localeCompare(leftExpense.id || '');
+    });
+
     return (
         <div className="expense-list-container">
             {expenses.length === 0 ? (
@@ -12,7 +23,7 @@ const ExpenseList = ({ expenses, onDelete }) => {
                     No records found in databanks.
                 </div>
             ) : (
-                expenses.map((expense, index) => (
+                sortedExpenses.map((expense, index) => (
                     <motion.div
                         key={expense.id}
                         className="expense-item"
@@ -23,11 +34,19 @@ const ExpenseList = ({ expenses, onDelete }) => {
                         <div className="expense-info">
                             <h4>{expense.name}</h4>
                             <span className="expense-date">{formatDate(expense.date)}</span>
+                            <span className="expense-category-label">{expense.category || 'Uncategorized'}</span>
                         </div>
                         <div className="expense-actions">
                             <span className={`expense-amount ${expense.type === 'credit' ? 'credit-amount' : ''}`}>
                                 {expense.type === 'credit' ? '+' : '-'} {formatCurrency(expense.amount)}
                             </span>
+                            <button
+                                className="btn-edit"
+                                onClick={() => onEdit?.(expense)}
+                                aria-label="Edit expense"
+                            >
+                                <Pencil size={16} />
+                            </button>
                             <button
                                 className="btn-delete"
                                 onClick={() => onDelete(expense.id)}

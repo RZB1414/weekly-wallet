@@ -6,7 +6,7 @@ import { formatCurrency, calculateRemaining, getWeekRange, formatDate, filterExp
 import { useAuth } from '../lib/AuthContext';
 import '../styles/WeekCard.css';
 
-const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings, onOpenAddExpense, carryovers }) => {
+const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, onEditExpense, weekNumber, totalWeeks, totalSavings, currentMonthSavings, onOpenAddExpense, carryovers }) => {
 
     const handleDeleteExpense = (id) => {
         if (window.confirm("Are you sure you want to delete this expense?")) {
@@ -194,11 +194,11 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
 
             <div className="card-content">
                 {viewMode === 'LATEST' ? (
-                    <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} />
+                    <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />
                 ) : (
                     (() => {
                         const data = getCategoryData(viewMode);
-                        if (!data) return <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} />;
+                        if (!data) return <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />;
 
                         return (
                             <div className="supermarket-view">
@@ -214,7 +214,7 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, weekNumb
                                         </span>
                                     </div>
                                 </div>
-                                <ExpenseList expenses={data.expenses} onDelete={handleDeleteExpense} />
+                                <ExpenseList expenses={data.expenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />
                             </div>
                         );
                     })()

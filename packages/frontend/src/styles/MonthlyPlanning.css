@@ -3,7 +3,10 @@
     top: 0;
     left: 0;
     width: 100vw;
+    height: 100vh;
     height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
     background: var(--color-bg);
     display: flex;
     justify-content: center;
@@ -17,7 +20,11 @@
     border-radius: 0;
     width: 100vw;
     max-width: none;
+    height: 100vh;
     height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     box-shadow: none;
@@ -27,9 +34,13 @@
 
 .monthly-planning-modal.read-only {
     width: 100vw;
+    height: 100vh;
     height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
     max-width: none;
-    max-height: none;
+    max-height: 100dvh;
     border: none;
     border-radius: 0;
 }
@@ -253,9 +264,14 @@
 }
 
 .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
     padding: 1.5rem;
+    padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem));
     border-top: 2px dashed var(--color-soft-gray);
-    background: #FAFAFA;
+    background: rgba(250, 250, 250, 0.96);
+    backdrop-filter: blur(12px);
     border-radius: 0;
 }
 
@@ -329,39 +345,6 @@
 .delete-btn:hover {
     background: var(--color-text-alert);
     color: white;
-}
-
-/* Floating FAB for Opening Modal */
-.monthly-planning-btn {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    /* Moved to left to balance UI */
-    background: white;
-    border: none;
-    color: var(--color-primary);
-    padding: 12px 24px;
-    border-radius: 30px;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 100;
-    font-family: var(--font-display);
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.monthly-planning-btn::before {
-    content: '📅';
-    /* Emoji icon */
-    font-size: 1.2rem;
-}
-
-.monthly-planning-btn:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
 }
 
 .salary-section {

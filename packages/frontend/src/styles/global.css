@@ -38,6 +38,7 @@ body {
   font-family: var(--font-body);
   overflow-x: hidden;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   /* Removido o background-image escuro para focar no calor do creme */
 }

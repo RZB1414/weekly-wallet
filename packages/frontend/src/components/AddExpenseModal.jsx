@@ -10,7 +10,18 @@ const modalVariants = {
     exit: { opacity: 0, scale: 0.8 }
 };
 
-const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
+const getInitialFormState = (expense = null) => ({
+    name: expense?.name || '',
+    amount: expense?.amount != null ? String(expense.amount) : '',
+    date: expense?.date || new Date().toISOString().slice(0, 10),
+    type: expense?.type || 'expense',
+    category: expense?.category || '',
+    refundTargetCategory: expense?.refundTargetCategory || ''
+});
+
+const AddExpenseModal = ({ isOpen, onClose, onAdd, onSave, categories = [], initialExpense = null }) => {
+    const isEditing = Boolean(initialExpense);
+    const initialFormState = getInitialFormState(initialExpense);
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -19,6 +30,20 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
     const [isSplit, setIsSplit] = useState(false);
     const [installments, setInstallments] = useState(2);
     const [refundTargetCategory, setRefundTargetCategory] = useState('');
+
+    React.useEffect(() => {
+        if (!isOpen) return;
+
+        setName(initialFormState.name);
+        setAmount(initialFormState.amount);
+        setDate(initialFormState.date);
+        setType(initialFormState.type);
+        setCategory(initialFormState.category);
+        setRefundTargetCategory(initialFormState.refundTargetCategory);
+        setIsSplit(false);
+        setInstallments(2);
+    }, [isOpen, initialFormState.amount, initialFormState.category, initialFormState.date, initialFormState.name, initialFormState.refundTargetCategory, initialFormState.type]);
+
     const refundTargetOptions = React.useMemo(() => {
         const seen = new Set();
         return categories
@@ -84,10 +109,30 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!name || !amount) return;
+        if (!name || !amount || !category) return;
 
         const parsedAmount = parseFloat(amount);
         if (Number.isNaN(parsedAmount)) return;
+
+        if (isEditing) {
+            const updatedExpense = {
+                ...initialExpense,
+                name: name.trim(),
+                amount: parsedAmount,
+                date,
+                type,
+                category,
+                refundTargetCategory: category === REFUNDS_CATEGORY_NAME ? refundTargetCategory : ''
+            };
+
+            if (category === REFUNDS_CATEGORY_NAME && (!refundTargetOptions.length || !refundTargetCategory)) {
+                return;
+            }
+
+            onSave?.(updatedExpense);
+            onClose();
+            return;
+        }
 
         if (category === REFUNDS_CATEGORY_NAME) {
             if (refundTargetOptions.length === 0 || !refundTargetCategory) return;
@@ -118,18 +163,18 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                     amount: splitAmount,
                     date: installmentDate.toISOString().slice(0, 10),
                     type,
-                    category: category || 'Uncategorized'
+                    category
                 });
             }
             onAdd(expensesToAdd);
         } else {
             onAdd({
                 id: uuidv4(),
-                name,
+                name: name.trim(),
                 amount: parsedAmount,
                 date,
                 type,
-                category: category || 'Uncategorized'
+                category
             });
         }
 
@@ -142,7 +187,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
         onClose();
     };
 
-    const disableSave = category === REFUNDS_CATEGORY_NAME && refundTargetOptions.length === 0;
+    const disableSave = !category || (category === REFUNDS_CATEGORY_NAME && refundTargetOptions.length === 0);
 
     return (
         <AnimatePresence>
@@ -160,7 +205,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                         animate="visible"
                         exit="exit"
                     >
-                        <h2>Add Transaction</h2>
+                        <h2>{isEditing ? 'Edit Transaction' : 'Add Transaction'}</h2>
                         <form onSubmit={handleSubmit}>
                             {/* Type Toggle */}
                             <div className="type-toggle-container">
@@ -168,6 +213,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                     type="button"
                                     className={`type-btn expense ${type === 'expense' ? 'active' : ''}`}
                                     onClick={() => setType('expense')}
+                                    disabled={isEditing && category === REFUNDS_CATEGORY_NAME}
                                 >
                                     Expense
                                 </button>
@@ -188,10 +234,11 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="e.g. Lightsaber Fuel"
                                     autoFocus
+                                    required
                                 />
                             </div>
 
-                            {type === 'expense' && (
+                            {type === 'expense' && !isEditing && (
                                 <div className="form-group">
                                     <div className="split-checkbox-wrapper">
                                         <input
@@ -240,6 +287,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                     onChange={(e) => setAmount(e.target.value)}
                                     placeholder="0.00"
                                     step="0.01"
+                                    required
                                 />
                             </div>
 
@@ -248,6 +296,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                 <select
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value)}
+                                    required
                                 >
                                     <option value="" disabled>Select Category</option>
                                     {categories.map((cat, index) => (
@@ -257,6 +306,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
                                     ))}
                                     <option value="Uncategorized" style={{ color: 'black' }}>Uncategorized</option>
                                 </select>
+                                {!category && <small className="form-error">Select a category before saving.</small>}
                             </div>
 
                             {type === 'credit' && category === REFUNDS_CATEGORY_NAME && (
@@ -295,7 +345,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAdd, categories = [] }) => {
 
                             <div className="modal-actions">
                                 <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
-                                <button type="submit" className="btn-save" disabled={disableSave}>Save</button>
+                                <button type="submit" className="btn-save" disabled={disableSave}>{isEditing ? 'Save Changes' : 'Save'}</button>
                             </div>
                         </form>
                     </motion.div>

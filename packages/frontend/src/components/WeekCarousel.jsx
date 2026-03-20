@@ -59,7 +59,7 @@ const swipePower = (offset, velocity) => {
     return Math.abs(offset) * velocity;
 };
 
-const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense, totalSavings, onOpenAddExpense }) => {
+const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeIndex, onIndexChange, onGlobalAddExpense, onEditExpense, totalSavings, onOpenAddExpense }) => {
     // We rely on parent for index management now.
     // Internal direction state is fine to keep here for animations
     const [direction, setDirection] = useState(0);
@@ -179,6 +179,7 @@ const WeekCarousel = ({ weeks, categories, onUpdateWeek, onCreateWeek, activeInd
                                     categories={categories}
                                     onUpdateWeek={(updated) => onUpdateWeek(updated)} // Pass just updated week, parent handles index map
                                     onGlobalAddExpense={onGlobalAddExpense} // Pass global handler
+                                    onEditExpense={onEditExpense}
                                     weekNumber={activeIndex + 1}
                                     totalWeeks={weeks.length}
                                     totalSavings={totalSavings}

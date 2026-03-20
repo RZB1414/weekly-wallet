@@ -2,6 +2,10 @@
 .guide-overlay {
     position: fixed;
     inset: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
     background: rgba(0, 0, 0, 0.5);
     z-index: 9999;
     display: flex;
@@ -23,6 +27,7 @@
 .guide-container {
     width: 100%;
     max-width: 480px;
+    max-height: 92dvh;
     max-height: 92vh;
     background: #FFFBEB;
     border-radius: 24px 24px 0 0;
