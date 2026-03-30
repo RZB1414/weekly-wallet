@@ -1,3 +1,35 @@
+/* Responsividade para tablets grandes (Samsung Tab Ultra) */
+@media (min-width: 1280px) {
+    .monthly-planning-modal {
+        max-width: 900px;
+        width: 90vw;
+        min-height: 700px;
+        max-height: 90vh;
+        border-radius: 24px;
+        margin: 0 auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+    }
+    .modal-header {
+        padding: 2.2rem 2.5rem 1.5rem 2.5rem;
+        border-radius: 24px 24px 0 0;
+    }
+    .modal-content {
+        padding: 2.5rem 2.5rem 2rem 2.5rem;
+        font-size: 1.13rem;
+    }
+    .salary-input-group input,
+    .add-item-input {
+        font-size: 1.13rem;
+        padding: 12px 18px;
+    }
+    .plan-list {
+        gap: 24px;
+    }
+    .plan-card {
+        border-radius: 18px;
+        padding: 22px 32px;
+    }
+}
 .monthly-planning-overlay {
     position: fixed;
     top: 0;
@@ -111,20 +143,25 @@
     border: 1px solid var(--color-soft-gray);
 }
 
+/* Melhor visual e usabilidade para inputs de categoria/valor */
 .add-item-input {
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
+    background: #fff;
+    border: 1.5px solid var(--color-soft-gray);
+    border-radius: 8px;
     color: var(--color-text-primary);
-    padding: 8px;
+    padding: 10px 14px;
     flex: 1;
     outline: none;
     font-family: var(--font-body);
-    transition: border-color 0.2s;
+    font-size: 1.05rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    margin-right: 8px;
 }
 
 .add-item-input:focus {
-    border-bottom-color: var(--color-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 12px rgba(59,130,246,0.08);
 }
 
 .category-select {
@@ -313,13 +350,16 @@
 .add-category-form .add-item-input {
     flex: 2;
     min-width: 120px;
-    /* Prevent shrinking too much */
+    max-width: 220px;
+    margin-right: 8px;
 }
 
 .add-category-form .add-item-input:nth-child(2) {
     flex: 1;
-    max-width: 100px;
-    /* Budget input */
+    max-width: 110px;
+    min-width: 70px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 .delete-btn {

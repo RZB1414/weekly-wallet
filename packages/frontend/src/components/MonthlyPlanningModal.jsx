@@ -161,12 +161,43 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             const currentSalaryInput = parseFloat(salaryInput);
             const finalSalary = !isNaN(currentSalaryInput) ? currentSalaryInput : salary;
 
-            // We ONLY save Categories and Salary. Expenses are derived from daily logs now.
+            // Salva o mês atual normalmente
             await api.saveMonthlyPlanning(selectedYear, selectedMonth, {
                 categories: categories,
                 salary: finalSalary
             });
             setSalary(finalSalary);
+
+            // Propaga categorias para os próximos 12 meses se não existirem
+            const propagateMonths = 12;
+            for (let i = 1; i <= propagateMonths; i++) {
+                const nextDate = new Date(selectedYear, selectedMonth - 1 + i, 1);
+                const nextYear = nextDate.getFullYear();
+                const nextMonth = nextDate.getMonth() + 1;
+                try {
+                    const nextPlan = await api.getMonthlyPlanning(nextYear, nextMonth);
+                    let nextCategories = Array.isArray(nextPlan.categories) ? [...nextPlan.categories] : [];
+                    let changed = false;
+                    categories.forEach(cat => {
+                        if (!nextCategories.some(c => c.name === cat.name)) {
+                            nextCategories.push({ ...cat, id: cat.id || Date.now() + Math.random() });
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        await api.saveMonthlyPlanning(nextYear, nextMonth, {
+                            categories: nextCategories,
+                            salary: nextPlan.salary || 0
+                        });
+                    }
+                } catch (e) {
+                    // Se não existe plano, cria novo com as categorias atuais
+                    await api.saveMonthlyPlanning(nextYear, nextMonth, {
+                        categories: categories.map(cat => ({ ...cat, id: cat.id || Date.now() + Math.random() })),
+                        salary: 0
+                    });
+                }
+            }
 
             if (onPlanSave) {
                 onPlanSave(selectedYear, selectedMonth, categories, finalSalary);

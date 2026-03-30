@@ -1,3 +1,108 @@
+/* Month selector improvements */
+.dashboard-month-selector {
+    margin: 1.2rem 0 2rem 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.month-select {
+    padding: 0.5rem 2.2rem 0.5rem 1rem;
+    border-radius: 10px;
+    border: 1.5px solid #bdbdbd;
+    font-size: 1.08rem;
+    background: #f7f6fb;
+    color: #3a2c5a;
+    outline: none;
+    min-width: 170px;
+    box-shadow: 0 1px 4px rgba(126,87,194,0.07);
+    transition: border 0.2s, box-shadow 0.2s;
+}
+.month-select:focus {
+    border: 2px solid #7e57c2;
+    background: #f3f0fa;
+    box-shadow: 0 2px 8px rgba(126,87,194,0.13);
+}
+
+/* Custom legend improvements: align values */
+.custom-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 1.2rem;
+    margin-bottom: 1.2rem;
+}
+.custom-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.98rem;
+    min-width: 220px;
+}
+.custom-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+.custom-legend-label {
+    flex: 1 1 60%;
+    color: #4a3c6a;
+    text-align: left;
+    padding-right: 0.5rem;
+}
+.custom-legend-value {
+    font-weight: 500;
+    color: #7e57c2;
+    min-width: 70px;
+    text-align: right;
+    flex: 0 0 70px;
+}
+/* Samsung Tab Ultra e tablets grandes */
+@media (min-width: 1280px) {
+    .dashboard-container {
+        padding: 48px max(64px, calc(50% - 600px));
+    }
+    .charts-and-lists {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+    }
+    .hero-section, .quick-glance-section, .progress-section {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .hero-value {
+        font-size: 5.5rem;
+    }
+    .glass-card, .recent-tx-card, .chart-card {
+        border-radius: 24px;
+        padding: 32px 32px 28px 32px;
+    }
+    .dashboard-header {
+        min-height: 320px;
+    }
+    .dashboard-header .greeting-text {
+        font-size: 1.45rem;
+        padding: 18px 28px;
+    }
+    .progress-bar-bg {
+        height: 18px;
+        border-radius: 12px;
+    }
+    .progress-bar-fill {
+        border-radius: 12px;
+    }
+    .custom-legend {
+        font-size: 1.1rem;
+    }
+    .tx-list .tx-item {
+        font-size: 1.08rem;
+        padding: 18px 0;
+    }
+}
 /* Dashboard.css - V3 Modern Glassmorphism & Typography */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&display=swap');

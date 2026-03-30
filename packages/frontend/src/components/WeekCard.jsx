@@ -194,11 +194,26 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, onEditEx
 
             <div className="card-content">
                 {viewMode === 'LATEST' ? (
-                    <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />
+                    <ExpenseList
+                        expenses={[...week.expenses].sort((a, b) => {
+                            const da = new Date(a.date).getTime();
+                            const db = new Date(b.date).getTime();
+                            if (da !== db) return db - da;
+                            return (b.id || '').localeCompare(a.id || '');
+                        })}
+                        onDelete={handleDeleteExpense}
+                        onEdit={onEditExpense}
+                    />
                 ) : (
                     (() => {
                         const data = getCategoryData(viewMode);
-                        if (!data) return <ExpenseList expenses={week.expenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />;
+                        const sortedExpenses = data && data.expenses ? [...data.expenses].sort((a, b) => {
+                            const da = new Date(a.date).getTime();
+                            const db = new Date(b.date).getTime();
+                            if (da !== db) return db - da;
+                            return (b.id || '').localeCompare(a.id || '');
+                        }) : [];
+                        if (!data) return <ExpenseList expenses={[]} onDelete={handleDeleteExpense} onEdit={onEditExpense} />;
 
                         return (
                             <div className="supermarket-view">
@@ -214,7 +229,7 @@ const WeekCard = ({ week, categories, onUpdateWeek, onGlobalAddExpense, onEditEx
                                         </span>
                                     </div>
                                 </div>
-                                <ExpenseList expenses={data.expenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />
+                                <ExpenseList expenses={sortedExpenses} onDelete={handleDeleteExpense} onEdit={onEditExpense} />
                             </div>
                         );
                     })()

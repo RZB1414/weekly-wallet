@@ -1,75 +1,34 @@
-import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { useAuth } from '../lib/AuthContext';
-import { api } from '../lib/api';
-import { formatCurrency, getFinancialInfo, getMonthQuarters, getWeeklyCategoryCarryover } from '../lib/utils';
-import {
-    PieChart, Pie, Tooltip, ResponsiveContainer, Cell
-} from 'recharts';
-import '../styles/Dashboard.css';
 
-const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, onOpenPlanning, onToggleMenu }) => {
-    // Default avatar if none provided (avoids Vite import errors on missing files)
-    const weeklyAvatar = '/chewie.jpg';
-    const { user } = useAuth();
-    const [showRunwayInfo, setShowRunwayInfo] = useState(false);
-    const [showRunwayMath, setShowRunwayMath] = useState(false);
-    const [chartsReady, setChartsReady] = useState(false);
-    const [isEditingProjection, setIsEditingProjection] = useState(false);
-    const [showWorstCase, setShowWorstCase] = useState(false);
-    const [showAvatarZoom, setShowAvatarZoom] = useState(false);
-    const projectionInputRef = useRef(null);
 
-    // Defer chart rendering
-    useLayoutEffect(() => {
-        const frame = requestAnimationFrame(() => setChartsReady(true));
-        return () => cancelAnimationFrame(frame);
+    // --- Month selection state ---
+    const today = new Date();
+    const [availableMonths, setAvailableMonths] = useState([]); // [{ value, label, year, month }]
+    const [selectedMonth, setSelectedMonth] = useState('');
+
+    // Helper to get year/month from selectedMonth
+    const selectedYearNum = Number(selectedMonth.split('-')[0] || today.getFullYear());
+    const selectedMonthNum = Number(selectedMonth.split('-')[1] || (today.getMonth() + 1));
+
+    // Buscar meses disponíveis ao carregar
+    useEffect(() => {
+        const fetchMonths = async () => {
+            const res = await api.getMonthlyPlannings();
+            const months = (res.plans || []).map(p => {
+                const value = p.year + '-' + String(p.month).padStart(2, '0');
+                const label = new Date(p.year, p.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+                return { value, label, year: p.year, month: p.month };
+            });
+            setAvailableMonths(months);
+            // Inicializa com o mês mais recente
+            if (months.length > 0) setSelectedMonth(months[0].value);
+        };
+        fetchMonths();
     }, []);
 
-    // ── 1. KPI & Budget Calculations ─────────────────────────────
 
-    // Current Week Data
-    const currentWeekData = useMemo(() => {
-        if (!weeks || weeks.length === 0) return null;
-        const now = new Date();
-        const { year, month, quarter } = getFinancialInfo(now);
-        const currentWeek = weeks.find(w => w.id === quarter.id);
-
-        // Generate standard quarters for the current month to find the proper chronological previous week
-        const quarters = getMonthQuarters(year, month);
-        const currentQIndex = quarters.findIndex(q => q.id === quarter.id);
-        const monthWeeks = quarters.map(q => weeks.find(w => w.id === q.id) || { id: q.id, expenses: [], startDate: q.start, endDate: q.end });
-
-        const weeklyCategoryCarryover = categories.reduce((sum, cat) => {
-            if (cat.frequency !== 'weekly') return sum;
-            return sum + getWeeklyCategoryCarryover(monthWeeks, currentQIndex, cat);
-        }, 0);
-
-        const baseWeeklyBudget = categories.reduce((sum, cat) => {
-            if (cat.frequency === 'weekly') {
-                return sum + (cat.budget || 0);
-            }
-            return sum + ((cat.budget || 0) / 4);
-        }, 0);
-
-        const weeklyBudget = baseWeeklyBudget + weeklyCategoryCarryover;
-
-        if (!currentWeek) return { budget: weeklyBudget, spent: 0, balance: weeklyBudget };
-
-        const spent = currentWeek.expenses
-            .filter(e => e.type !== 'credit')
-            .reduce((sum, e) => sum + Number(e.amount), 0);
-
-        return {
-            budget: weeklyBudget,
-            spent,
-            balance: weeklyBudget - spent
-        };
-    }, [weeks, categories]);
-
-    // Current Month Data
+    // Current Month Data (for selected month)
     const currentMonthData = useMemo(() => {
-        const now = new Date();
-        const { year, month } = getFinancialInfo(now);
+        const { year, month } = getFinancialInfo(new Date(selectedYearNum, selectedMonthNum - 1));
         const quarters = getMonthQuarters(year, month);
 
         const currentMonthWeeks = quarters.map(q => {
@@ -96,7 +55,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
             balance: monthlyBudget - totalSpent,
             weeks: currentMonthWeeks
         };
-    }, [weeks, categories]);
+    }, [weeks, categories, selectedYearNum, selectedMonthNum]);
 
     // Progress Calculation
     const getProgressInfo = (spent, budget) => {
@@ -111,14 +70,19 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     const weeklyProgress = getProgressInfo(currentWeekData?.spent || 0, currentWeekData?.budget || 0);
     const monthlyProgress = getProgressInfo(currentMonthData?.spent || 0, currentMonthData?.budget || 0);
 
-    // ── 2. Recent Transactions ─────────────────────────
+    // ── 2. Recent Transactions (for selected month) ─────────────────────────
     const recentTransactions = useMemo(() => {
         const allExpenses = [];
-        // Flatten expenses from all weeks, sort by date
-        weeks.forEach(week => {
-            week.expenses.forEach(e => {
-                allExpenses.push({ ...e, weekId: week.id });
-            });
+        // Flatten expenses from all weeks of selected month, sort by date
+        const { year, month } = getFinancialInfo(new Date(selectedYearNum, selectedMonthNum - 1));
+        const quarters = getMonthQuarters(year, month);
+        quarters.forEach(q => {
+            const week = weeks.find(w => w.id === q.id);
+            if (week) {
+                week.expenses.forEach(e => {
+                    allExpenses.push({ ...e, weekId: week.id });
+                });
+            }
         });
 
         allExpenses.sort((a, b) => {
@@ -131,7 +95,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         });
 
         return allExpenses.slice(0, 5); // top 5
-    }, [weeks]);
+    }, [weeks, selectedYearNum, selectedMonthNum]);
 
     // ── 3. Donut Data ──────────────────────────────
     const donutData = useMemo(() => {
@@ -176,12 +140,12 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         return Number(localStorage.getItem('projectionMonths')) || 12;
     });
 
+    // Financial Momentum: recalcula sempre que weeks ou categories mudam
     useEffect(() => {
         const calculateRunway = async () => {
             setRealisticRunway(prev => ({ ...prev, loading: true }));
             try {
                 // Fetch plans data fresh each time the calculation runs
-                // This only happens when weeks or categories actually change
                 const plansList = await api.getMonthlyPlannings();
                 const allPlansData = plansList.plans ? await Promise.all(
                     plansList.plans.map(p => api.getMonthlyPlanning(p.year, p.month))
@@ -198,7 +162,6 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 });
 
                 const globalNetWorth = accumulatedRemainingBalance + (totalSavings || 0);
-
 
                 let monthlyBurn = 0;
                 let monthlyIncome = 0;
@@ -222,11 +185,12 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     monthlyBurn = monthlyIncome - latestRemainingBalance;
                 }
 
-                if (monthlyBurn === 0 && currentWeekData) {
-                    monthlyBurn = currentWeekData.spent * 4;
+                // Fallbacks (mantém para robustez, mas não depende de currentWeekData)
+                if (monthlyBurn === 0) {
+                    monthlyBurn = 1;
                 }
-                if (totalBudgets === 0 && currentWeekData) {
-                    totalBudgets = currentWeekData.spent * 4;
+                if (totalBudgets === 0) {
+                    totalBudgets = 1;
                 }
 
                 const netMonthlyFlow = monthlyIncome - totalBudgets;
@@ -237,7 +201,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                 let daysRunwayStr = '';
 
                 // Define burnToUse at a higher scope so it can be passed to state safely
-                const burnToUse = monthlyBurn > 0 ? monthlyBurn : (totalExpenses || 1);
+                const burnToUse = monthlyBurn > 0 ? monthlyBurn : 1;
 
                 if (globalNetWorth <= 0) {
                     resultString = '0 Months';
@@ -284,12 +248,12 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
                 // --- Optimistic Calculation (Financial Momentum) ---
                 let optResultString = '';
-                let optDetailsString = ''; // String used when NOT in safe mode
+                let optDetailsString = '';
                 let optIsSafe = false;
 
                 if (netMonthlyFlow > 0) {
                     optResultString = '∞ Safe';
-                    optDetailsString = ''; // Handled dynamically by JSX input
+                    optDetailsString = '';
                     optIsSafe = true;
                 } else if (netMonthlyFlow === 0) {
                     optResultString = 'Stagnant';
@@ -323,8 +287,8 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
                     loading: false,
                     details: optDetailsString,
                     wealth: globalNetWorth,
-                    netMonthlyFlow, // Pass flow straight to state to render dynamic projections
-                    daysRunway: '', // Usually not helpful for optimistic view
+                    netMonthlyFlow,
+                    daysRunway: '',
                     isSafe: optIsSafe,
                     raw: { monthlyIncome, monthlyBurn: burnToUse, totalBudgets, netMonthlyFlow }
                 });
@@ -342,6 +306,7 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
             setRealisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
             setOptimisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [weeks, categories]);
 
     // Format relative time (e.g. "Today", "Yesterday", "Oct 12")
@@ -357,8 +322,27 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
     }
 
 
+    // --- Month selector UI ---
+    // Mostra apenas meses disponíveis
+
+    // --- JSX Render ---
+    // (continuação do componente Dashboard)
     return (
         <div className="dashboard-container">
+            {/* Month Selector */}
+            <div className="dashboard-month-selector" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', margin: '16px 0 0 0', gap: 8 }}>
+                <label htmlFor="month-select" style={{ fontWeight: 500, marginRight: 8 }}>Month:</label>
+                <select
+                    id="month-select"
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(e.target.value)}
+                    style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '1rem', background: '#fff', color: '#111827' }}
+                >
+                    {availableMonths.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+            </div>
             <header className="dashboard-header">
                 <div className="dashboard-header-bg" style={{ backgroundImage: `url(${user?.avatar || '/no-avatar.jpg'})` }}></div>
                 <div className="dashboard-header-overlay"></div>
@@ -842,6 +826,4 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
 
         </div>
     );
-};
-
 export default Dashboard;
