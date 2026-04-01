@@ -141,6 +141,27 @@
     }
 }
 
+@media (min-width: 1280px) {
+    .week-card {
+        max-width: 760px;
+        padding: 2.75rem;
+        border-radius: 30px;
+    }
+
+    .week-title {
+        font-size: 2.2rem;
+    }
+
+    .view-tab {
+        font-size: 0.8rem;
+        padding: 10px 8px;
+    }
+
+    .summary-item .value {
+        font-size: 1.3rem;
+    }
+}
+
 /* View Tabs */
 .view-tabs {
     display: flex;

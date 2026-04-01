@@ -30,6 +30,16 @@ const normalizeWeeksRefunds = (weeks = []) => {
     }));
 };
 
+const isManualPlan = (plan = {}) => plan.source === 'manual';
+const LEGACY_PROPAGATED_CLEANUP_VERSION = '2026-04-propagated-cleanup-v2';
+
+const clonePlanningCategories = (categories = []) => {
+    return (categories || []).map(category => ({
+        ...category,
+        id: category.id || crypto.randomUUID()
+    }));
+};
+
 const App = () => {
     const { user, loading: authLoading, logout, changePassword, updateAvatar } = useAuth();
 
@@ -124,6 +134,12 @@ const App = () => {
 
     const [selectedMonth, setSelectedMonth] = useState(normalizedMonth);
     const [selectedYear, setSelectedYear] = useState(initialYear);
+    const [manualPlanningMonths, setManualPlanningMonths] = useState([]);
+    const [planningVersion, setPlanningVersion] = useState(0);
+
+    const refreshPlanningData = useCallback(() => {
+        setPlanningVersion(currentVersion => currentVersion + 1);
+    }, []);
 
     // Initial Load — only when user is logged in
     useEffect(() => {
@@ -154,6 +170,132 @@ const App = () => {
         };
         loadData();
     }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        let isMounted = true;
+
+        const syncMonthlyPlanningData = async () => {
+            try {
+                const plansList = await api.getMonthlyPlannings();
+                const sortedPlans = [...(plansList.plans || [])].sort((leftPlan, rightPlan) => {
+                    if (leftPlan.year !== rightPlan.year) {
+                        return rightPlan.year - leftPlan.year;
+                    }
+
+                    return rightPlan.month - leftPlan.month;
+                });
+
+                const detailedPlans = await api.getMonthlyPlanningDetails(sortedPlans);
+                if (!isMounted) return;
+
+                let didMutate = false;
+                const cleanupKey = `${LEGACY_PROPAGATED_CLEANUP_VERSION}:${user.email}`;
+
+                if (localStorage.getItem(cleanupKey) !== 'done') {
+                    for (const plan of detailedPlans) {
+                        const isProtectedMonth = plan.year === 2026 && (plan.month === 3 || plan.month === 4);
+                        const normalizedSource = isProtectedMonth ? 'manual' : 'propagated';
+                        const normalizedCategories = isProtectedMonth ? (plan.data?.categories || []) : [];
+                        const currentSource = plan.data?.source;
+                        const currentCategories = Array.isArray(plan.data?.categories) ? plan.data.categories : [];
+                        const needsSourceFix = currentSource !== normalizedSource;
+                        const needsCategoryCleanup = !isProtectedMonth && currentCategories.length > 0;
+
+                        if (needsSourceFix || needsCategoryCleanup) {
+                            await api.saveMonthlyPlanning(plan.year, plan.month, {
+                                ...plan.data,
+                                categories: normalizedCategories,
+                                source: normalizedSource
+                            });
+                            didMutate = true;
+                        }
+                    }
+
+                    localStorage.setItem(cleanupKey, 'done');
+                }
+
+                const todayDate = new Date();
+                if (todayDate.getDate() === 1) {
+                    const currentPlanYear = todayDate.getFullYear();
+                    const currentPlanMonth = todayDate.getMonth() + 1;
+                    const previousPlanDate = new Date(currentPlanYear, currentPlanMonth - 2, 1);
+                    const previousPlanYear = previousPlanDate.getFullYear();
+                    const previousPlanMonth = previousPlanDate.getMonth() + 1;
+
+                    const currentPlan = detailedPlans.find(plan => plan.year === currentPlanYear && plan.month === currentPlanMonth);
+                    const previousPlan = detailedPlans.find(plan => plan.year === previousPlanYear && plan.month === previousPlanMonth)
+                        || { data: await api.getMonthlyPlanning(previousPlanYear, previousPlanMonth) };
+
+                    const currentHasCategories = Array.isArray(currentPlan?.data?.categories) && currentPlan.data.categories.length > 0;
+                    const previousCategories = clonePlanningCategories(previousPlan?.data?.categories || []);
+
+                    if (!currentHasCategories && previousCategories.length > 0) {
+                        await api.saveMonthlyPlanning(currentPlanYear, currentPlanMonth, {
+                            ...currentPlan?.data,
+                            categories: previousCategories,
+                            salary: previousPlan?.data?.salary || 0,
+                            source: currentPlan?.data?.source === 'manual' ? 'manual' : 'propagated'
+                        });
+                        didMutate = true;
+                    }
+                }
+
+                if (didMutate && isMounted) {
+                    refreshPlanningData();
+                }
+            } catch (error) {
+                console.error('Failed to sync monthly planning data', error);
+            }
+        };
+
+        syncMonthlyPlanningData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [user, refreshPlanningData]);
+
+    useEffect(() => {
+        if (!user) {
+            setManualPlanningMonths([]);
+            return;
+        }
+
+        let isMounted = true;
+
+        const loadManualPlanningMonths = async () => {
+            try {
+                const plansList = await api.getMonthlyPlannings();
+                const sortedPlans = [...(plansList.plans || [])].sort((leftPlan, rightPlan) => {
+                    if (leftPlan.year !== rightPlan.year) {
+                        return rightPlan.year - leftPlan.year;
+                    }
+
+                    return rightPlan.month - leftPlan.month;
+                });
+
+                const detailedPlans = await api.getMonthlyPlanningDetails(sortedPlans);
+
+                if (!isMounted) return;
+
+                const manualMonths = detailedPlans
+                    .filter(({ data }) => isManualPlan(data))
+                    .map(({ year, month }) => ({ year, month }));
+
+                setManualPlanningMonths(manualMonths);
+            } catch (error) {
+                console.error('Failed to load manual planning months', error);
+            }
+        };
+
+        loadManualPlanningMonths();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [user, planningVersion]);
 
     // Load Categories for Selected Month
     useEffect(() => {
@@ -186,7 +328,7 @@ const App = () => {
             }
         };
         loadPlanning();
-    }, [selectedYear, selectedMonth, user]);
+    }, [selectedYear, selectedMonth, user, planningVersion]);
 
     // Sync to Backend whenever weeks change
     useEffect(() => {
@@ -323,6 +465,32 @@ const App = () => {
     }, [displayedWeeks]);
 
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
+
+    const availableHistoryYears = React.useMemo(() => {
+        return [...new Set(manualPlanningMonths.map(plan => plan.year))].sort((leftYear, rightYear) => rightYear - leftYear);
+    }, [manualPlanningMonths]);
+
+    const availableHistoryMonths = React.useMemo(() => {
+        return manualPlanningMonths
+            .filter(plan => plan.year === selectedYear)
+            .map(plan => plan.month)
+            .sort((leftMonth, rightMonth) => rightMonth - leftMonth);
+    }, [manualPlanningMonths, selectedYear]);
+
+    useEffect(() => {
+        if (manualPlanningMonths.length === 0) return;
+
+        const hasCurrentSelection = manualPlanningMonths.some(plan => plan.year === selectedYear && plan.month === selectedMonth);
+        if (hasCurrentSelection) return;
+
+        const currentMonthPlan = manualPlanningMonths.find(plan => plan.year === initialYear && plan.month === normalizedMonth);
+        const fallbackPlan = currentMonthPlan || manualPlanningMonths[0];
+
+        if (!fallbackPlan) return;
+
+        setSelectedYear(fallbackPlan.year);
+        setSelectedMonth(fallbackPlan.month);
+    }, [manualPlanningMonths, selectedYear, selectedMonth, initialYear, normalizedMonth]);
 
     // ── Add Expense Modal State ──
     const [isAddExpenseModalOpen, setIsAddExpenseModalOpenRaw] = useState(false);
@@ -585,6 +753,8 @@ const App = () => {
                     weeks={weeks}
                     categories={activeCategories}
                     totalSavings={totalSavings}
+                    isAppLoading={loading}
+                    planningVersion={planningVersion}
                     onNavigate={(view) => setCurrentView(view)}
                     onAddExpense={() => setIsAddExpenseModalOpen(true)}
                     onOpenPlanning={openMonthlyPlanning}
@@ -614,8 +784,9 @@ const App = () => {
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                                 className="glass-select"
+                                disabled={availableHistoryMonths.length === 0}
                             >
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                {availableHistoryMonths.map(m => (
                                     <option key={m} value={m}>{getMonthName(m)}</option>
                                 ))}
                             </select>
@@ -623,8 +794,9 @@ const App = () => {
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                                 className="glass-select"
+                                disabled={availableHistoryYears.length === 0}
                             >
-                                {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(y => (
+                                {availableHistoryYears.map(y => (
                                     <option key={y} value={y}>{y}</option>
                                 ))}
                             </select>
@@ -702,7 +874,9 @@ const App = () => {
                 onClose={closeMonthlyPlanning}
                 weeks={weeks}
                 onUpdateWeeks={setWeeks}
+                planningVersion={planningVersion}
                 onPlanSave={(year, month, categories) => {
+                    refreshPlanningData();
                     if (year === selectedYear && month === selectedMonth) {
                         setActiveCategories(categories);
                     }

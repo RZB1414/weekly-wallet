@@ -22,6 +22,10 @@
         font-size: 1.13rem;
         padding: 12px 18px;
     }
+    .add-category-form {
+        grid-template-columns: minmax(0, 1.8fr) minmax(180px, 0.9fr) auto;
+        gap: 14px;
+    }
     .plan-list {
         gap: 24px;
     }
@@ -157,6 +161,30 @@
     transition: border-color 0.2s, box-shadow 0.2s;
     box-shadow: 0 1px 6px rgba(0,0,0,0.04);
     margin-right: 8px;
+}
+
+.add-category-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(140px, 0.8fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.add-category-form .add-item-input {
+    margin-right: 0;
+    min-height: 46px;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.add-category-form .add-item-input[type="number"] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.add-category-form .add-item-input::placeholder {
+    color: #94a3b8;
 }
 
 .add-item-input:focus {
@@ -574,6 +602,71 @@
 .category-summary-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.over-budget-card {
+    background: white;
+    border: 1px solid rgba(255, 82, 82, 0.14);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    margin-bottom: 20px;
+}
+
+.over-budget-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.over-budget-card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    font-family: var(--font-display);
+}
+
+.over-budget-total {
+    color: var(--color-text-alert);
+    font-weight: 700;
+    font-family: var(--font-display);
+}
+
+.over-budget-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.over-budget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 245, 245, 0.95) 0%, rgba(255, 250, 250, 1) 100%);
+    border: 1px solid rgba(255, 82, 82, 0.12);
+}
+
+.over-budget-name {
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.over-budget-meta {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+}
+
+.over-budget-amount {
+    color: var(--color-text-alert);
+    font-weight: 700;
+    font-family: var(--font-display);
+    white-space: nowrap;
 }
 
 .cat-sum-header {

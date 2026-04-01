@@ -1,34 +1,223 @@
+import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useAuth } from '../lib/AuthContext';
+import { api } from '../lib/api';
+import { calculateCategoryNet, filterExpensesByCategory, formatCurrency, getFinancialInfo, getMonthQuarters, getWeeklyCategoryCarryover, normalizeRefundExpense } from '../lib/utils';
+import {
+    PieChart, Pie, Tooltip, Cell
+} from 'recharts';
+import '../styles/Dashboard.css';
 
-
-    // --- Month selection state ---
+const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, onOpenPlanning, onToggleMenu, isAppLoading = false, planningVersion = 0 }) => {
+    // Default avatar if none provided (avoids Vite import errors on missing files)
+    const weeklyAvatar = '/chewie.jpg';
+    const { user } = useAuth();
     const today = new Date();
-    const [availableMonths, setAvailableMonths] = useState([]); // [{ value, label, year, month }]
-    const [selectedMonth, setSelectedMonth] = useState('');
+    const currentMonthValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const [showRunwayInfo, setShowRunwayInfo] = useState(false);
+    const [showRunwayMath, setShowRunwayMath] = useState(false);
+    const [chartsReady, setChartsReady] = useState(false);
+    const [isEditingProjection, setIsEditingProjection] = useState(false);
+    const [showWorstCase, setShowWorstCase] = useState(false);
+    const [showAvatarZoom, setShowAvatarZoom] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState(currentMonthValue);
+    const [savedPlanningMonths, setSavedPlanningMonths] = useState([]);
+    const [monthCategories, setMonthCategories] = useState(categories);
+    const projectionInputRef = useRef(null);
+    const chartContainerRef = useRef(null);
+    const [chartBounds, setChartBounds] = useState({ width: 0, height: 0 });
 
-    // Helper to get year/month from selectedMonth
-    const selectedYearNum = Number(selectedMonth.split('-')[0] || today.getFullYear());
-    const selectedMonthNum = Number(selectedMonth.split('-')[1] || (today.getMonth() + 1));
+    const selectedYearNum = Number(selectedMonth.split('-')[0]);
+    const selectedMonthNum = Number(selectedMonth.split('-')[1]);
 
-    // Buscar meses disponíveis ao carregar
+    const monthOptions = useMemo(() => {
+        return [...savedPlanningMonths]
+            .sort((leftMonth, rightMonth) => rightMonth.value.localeCompare(leftMonth.value))
+            .map(option => ({
+                value: option.value,
+                label: option.label
+            }));
+    }, [savedPlanningMonths]);
+
+    const isManualPlan = (plan = {}) => {
+        return plan.source === 'manual';
+    };
+
     useEffect(() => {
-        const fetchMonths = async () => {
-            const res = await api.getMonthlyPlannings();
-            const months = (res.plans || []).map(p => {
-                const value = p.year + '-' + String(p.month).padStart(2, '0');
-                const label = new Date(p.year, p.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-                return { value, label, year: p.year, month: p.month };
-            });
-            setAvailableMonths(months);
-            // Inicializa com o mês mais recente
-            if (months.length > 0) setSelectedMonth(months[0].value);
+        let isMounted = true;
+
+        const loadSavedMonths = async () => {
+            try {
+                const plansList = await api.getMonthlyPlannings();
+                if (!isMounted) return;
+
+                const planRefs = (plansList.plans || []).sort((leftPlan, rightPlan) => {
+                    if (leftPlan.year !== rightPlan.year) {
+                        return rightPlan.year - leftPlan.year;
+                    }
+
+                    return rightPlan.month - leftPlan.month;
+                });
+
+                const detailedPlans = await api.getMonthlyPlanningDetails(planRefs);
+
+                const options = detailedPlans
+                    .filter(({ data }) => isManualPlan(data))
+                    .map(plan => {
+                        const value = `${plan.year}-${String(plan.month).padStart(2, '0')}`;
+                        return {
+                            value,
+                            label: new Date(plan.year, plan.month - 1, 1).toLocaleDateString('en-US', {
+                                month: 'long',
+                                year: 'numeric'
+                            }),
+                            year: plan.year,
+                            month: plan.month
+                        };
+                    });
+
+                setSavedPlanningMonths(options);
+
+                if (options.length === 0) return;
+
+                const currentMonthOption = options.find(option => option.value === currentMonthValue);
+                setSelectedMonth(currentMonthOption ? currentMonthValue : options[0].value);
+            } catch (error) {
+                console.error('Failed to load saved planning months', error);
+            }
         };
-        fetchMonths();
+
+        loadSavedMonths();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentMonthValue, planningVersion]);
+
+    const normalizePlanningCategories = (planningCategories = []) => {
+        if (!planningCategories.length) return categories;
+
+        return planningCategories.map(category => {
+            const parsedCategory = typeof category === 'string'
+                ? { name: category, budget: 0, type: 'credit', frequency: 'monthly' }
+                : category;
+
+            return {
+                ...parsedCategory,
+                type: parsedCategory.type || 'credit',
+                frequency: parsedCategory.frequency || 'monthly',
+                budget: parsedCategory.budget || 0
+            };
+        });
+    };
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadMonthPlanning = async () => {
+            try {
+                const planning = await api.getMonthlyPlanning(selectedYearNum, selectedMonthNum);
+                if (!isMounted) return;
+
+                if (planning?.categories?.length) {
+                    setMonthCategories(normalizePlanningCategories(planning.categories));
+                    return;
+                }
+
+                setMonthCategories(categories);
+            } catch (error) {
+                console.error('Failed to load dashboard planning', error);
+                if (isMounted) {
+                    setMonthCategories(categories);
+                }
+            }
+        };
+
+        loadMonthPlanning();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [selectedYearNum, selectedMonthNum, categories]);
+
+    const effectiveCategories = monthCategories?.length ? monthCategories : categories;
+    const selectedMonthDate = new Date(selectedYearNum, selectedMonthNum - 1, 1);
+    const clampedSelectedDate = new Date(
+        selectedYearNum,
+        selectedMonthNum - 1,
+        Math.min(today.getDate(), new Date(selectedYearNum, selectedMonthNum, 0).getDate())
+    );
+
+    // Defer chart rendering
+    useLayoutEffect(() => {
+        const frame = requestAnimationFrame(() => setChartsReady(true));
+        return () => cancelAnimationFrame(frame);
     }, []);
 
+    useLayoutEffect(() => {
+        if (!chartContainerRef.current) return undefined;
 
-    // Current Month Data (for selected month)
+        const updateBounds = () => {
+            if (!chartContainerRef.current) return;
+
+            const nextWidth = chartContainerRef.current.clientWidth;
+            const nextHeight = chartContainerRef.current.clientHeight;
+            if (nextWidth > 0 && nextHeight > 0) {
+                setChartBounds({ width: nextWidth, height: nextHeight });
+            }
+        };
+
+        updateBounds();
+
+        const observer = new ResizeObserver(() => updateBounds());
+        observer.observe(chartContainerRef.current);
+
+        return () => observer.disconnect();
+    }, []);
+
+    // ── 1. KPI & Budget Calculations ─────────────────────────────
+
+    // Current Week Data
+    const currentWeekData = useMemo(() => {
+        if (!weeks || weeks.length === 0) return null;
+        const { year, month, quarter } = getFinancialInfo(clampedSelectedDate);
+        const currentWeek = weeks.find(w => w.id === quarter.id);
+
+        // Generate standard quarters for the current month to find the proper chronological previous week
+        const quarters = getMonthQuarters(year, month);
+        const currentQIndex = quarters.findIndex(q => q.id === quarter.id);
+        const monthWeeks = quarters.map(q => weeks.find(w => w.id === q.id) || { id: q.id, expenses: [], startDate: q.start, endDate: q.end });
+
+        const weeklyCategoryCarryover = effectiveCategories.reduce((sum, cat) => {
+            if (cat.frequency !== 'weekly') return sum;
+            return sum + getWeeklyCategoryCarryover(monthWeeks, currentQIndex, cat);
+        }, 0);
+
+        const baseWeeklyBudget = effectiveCategories.reduce((sum, cat) => {
+            if (cat.frequency === 'weekly') {
+                return sum + (cat.budget || 0);
+            }
+            return sum + ((cat.budget || 0) / 4);
+        }, 0);
+
+        const weeklyBudget = baseWeeklyBudget + weeklyCategoryCarryover;
+
+        if (!currentWeek) return { budget: weeklyBudget, spent: 0, balance: weeklyBudget };
+
+        const spent = currentWeek.expenses
+            .filter(e => e.type !== 'credit')
+            .reduce((sum, e) => sum + Number(e.amount), 0);
+
+        return {
+            budget: weeklyBudget,
+            spent,
+            balance: weeklyBudget - spent
+        };
+    }, [weeks, effectiveCategories, clampedSelectedDate]);
+
+    // Current Month Data
     const currentMonthData = useMemo(() => {
-        const { year, month } = getFinancialInfo(new Date(selectedYearNum, selectedMonthNum - 1));
+        const { year, month } = getFinancialInfo(selectedMonthDate);
         const quarters = getMonthQuarters(year, month);
 
         const currentMonthWeeks = quarters.map(q => {
@@ -36,7 +225,7 @@
             return existing || { id: q.id, expenses: [] };
         });
 
-        const monthlyBudget = categories.reduce((sum, cat) => {
+        const monthlyBudget = effectiveCategories.reduce((sum, cat) => {
             if (cat.frequency === 'monthly') {
                 return sum + (cat.budget || 0);
             }
@@ -55,7 +244,7 @@
             balance: monthlyBudget - totalSpent,
             weeks: currentMonthWeeks
         };
-    }, [weeks, categories, selectedYearNum, selectedMonthNum]);
+    }, [weeks, effectiveCategories, selectedMonthDate]);
 
     // Progress Calculation
     const getProgressInfo = (spent, budget) => {
@@ -70,19 +259,62 @@
     const weeklyProgress = getProgressInfo(currentWeekData?.spent || 0, currentWeekData?.budget || 0);
     const monthlyProgress = getProgressInfo(currentMonthData?.spent || 0, currentMonthData?.budget || 0);
 
-    // ── 2. Recent Transactions (for selected month) ─────────────────────────
+    const monthlyExpenses = useMemo(() => {
+        return currentMonthData.weeks.flatMap(week => {
+            return (week.expenses || []).map(expense => normalizeRefundExpense(expense));
+        });
+    }, [currentMonthData]);
+
+    const overBudgetCategories = useMemo(() => {
+        return effectiveCategories
+            .map(category => {
+                const monthlyBudget = category.frequency === 'weekly'
+                    ? (category.budget || 0) * 4
+                    : (category.budget || 0);
+                const spent = calculateCategoryNet(monthlyExpenses, category.name);
+
+                return {
+                    ...category,
+                    monthlyBudget,
+                    spent,
+                    remaining: monthlyBudget - spent,
+                    exceededAmount: Math.max(spent - monthlyBudget, 0),
+                    expenses: filterExpensesByCategory(monthlyExpenses, category.name)
+                };
+            })
+            .filter(category => category.remaining < 0)
+            .sort((leftCategory, rightCategory) => rightCategory.exceededAmount - leftCategory.exceededAmount);
+    }, [effectiveCategories, monthlyExpenses]);
+
+    const totalOverBudgetAmount = useMemo(() => {
+        return overBudgetCategories.reduce((sum, category) => sum + category.exceededAmount, 0);
+    }, [overBudgetCategories]);
+
+    const currentFinancialWeekSpent = useMemo(() => {
+        if (!weeks || weeks.length === 0) return 0;
+
+        const { quarter } = getFinancialInfo(new Date());
+        const currentWeek = weeks.find(week => week.id === quarter.id);
+        if (!currentWeek) return 0;
+
+        return (currentWeek.expenses || [])
+            .filter(expense => expense.type !== 'credit')
+            .reduce((sum, expense) => sum + Number(expense.amount), 0);
+    }, [weeks]);
+
+    // ── 2. Recent Transactions ─────────────────────────
     const recentTransactions = useMemo(() => {
         const allExpenses = [];
-        // Flatten expenses from all weeks of selected month, sort by date
-        const { year, month } = getFinancialInfo(new Date(selectedYearNum, selectedMonthNum - 1));
+        const { year, month } = getFinancialInfo(selectedMonthDate);
         const quarters = getMonthQuarters(year, month);
-        quarters.forEach(q => {
-            const week = weeks.find(w => w.id === q.id);
-            if (week) {
-                week.expenses.forEach(e => {
-                    allExpenses.push({ ...e, weekId: week.id });
-                });
-            }
+
+        quarters.forEach(quarter => {
+            const week = weeks.find(item => item.id === quarter.id);
+            if (!week) return;
+
+            week.expenses.forEach(e => {
+                allExpenses.push({ ...e, weekId: week.id });
+            });
         });
 
         allExpenses.sort((a, b) => {
@@ -95,7 +327,7 @@
         });
 
         return allExpenses.slice(0, 5); // top 5
-    }, [weeks, selectedYearNum, selectedMonthNum]);
+    }, [weeks, selectedMonthDate]);
 
     // ── 3. Donut Data ──────────────────────────────
     const donutData = useMemo(() => {
@@ -140,21 +372,38 @@
         return Number(localStorage.getItem('projectionMonths')) || 12;
     });
 
-    // Financial Momentum: recalcula sempre que weeks ou categories mudam
     useEffect(() => {
+        if (isAppLoading) {
+            setRealisticRunway(prev => ({ ...prev, loading: true }));
+            setOptimisticRunway(prev => ({ ...prev, loading: true }));
+            return;
+        }
+
+        if (!Array.isArray(weeks)) return;
+
+        let isCancelled = false;
+
         const calculateRunway = async () => {
             setRealisticRunway(prev => ({ ...prev, loading: true }));
+            setOptimisticRunway(prev => ({ ...prev, loading: true }));
             try {
-                // Fetch plans data fresh each time the calculation runs
                 const plansList = await api.getMonthlyPlannings();
-                const allPlansData = plansList.plans ? await Promise.all(
-                    plansList.plans.map(p => api.getMonthlyPlanning(p.year, p.month))
-                ) : [];
+                const sortedPlans = [...(plansList.plans || [])].sort((leftPlan, rightPlan) => {
+                    if (leftPlan.year !== rightPlan.year) {
+                        return rightPlan.year - leftPlan.year;
+                    }
+
+                    return rightPlan.month - leftPlan.month;
+                });
+
+                const allPlansData = sortedPlans.length > 0 ? await api.getMonthlyPlanningDetails(sortedPlans) : [];
+
+                const manualPlansData = allPlansData.filter(plan => isManualPlan(plan.data));
 
                 let accumulatedRemainingBalance = 0;
-                allPlansData.forEach(plan => {
-                    const mIncome = plan.salary || 0;
-                    const mBudgets = plan.categories.reduce((sum, c) => {
+                manualPlansData.forEach(({ data }) => {
+                    const mIncome = data.salary || 0;
+                    const mBudgets = (data.categories || []).reduce((sum, c) => {
                         const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
                         return sum + monthlyEquivalent;
                     }, 0);
@@ -163,37 +412,34 @@
 
                 const globalNetWorth = accumulatedRemainingBalance + (totalSavings || 0);
 
+
                 let monthlyBurn = 0;
                 let monthlyIncome = 0;
                 let totalBudgets = 0;
                 let latestRemainingBalance = 0;
-                const latestPlanRef = plansList.plans && plansList.plans.length > 0 ? plansList.plans[0] : null;
+                const latestManualPlan = manualPlansData.length > 0 ? manualPlansData[0] : null;
 
-                if (latestPlanRef) {
-                    const latestData = await api.getMonthlyPlanning(latestPlanRef.year, latestPlanRef.month);
+                if (latestManualPlan) {
+                    const latestData = latestManualPlan.data;
                     monthlyIncome = latestData.salary || 0;
 
-                    totalBudgets = latestData.categories.reduce((sum, c) => {
+                    totalBudgets = (latestData.categories || []).reduce((sum, c) => {
                         const monthlyEquivalent = c.frequency === 'weekly' ? (c.budget || 0) * 4 : (c.budget || 0);
                         return sum + monthlyEquivalent;
                     }, 0);
 
-                    // Calculation: Remaining Monthly Balance for current month
                     latestRemainingBalance = monthlyIncome - totalBudgets;
-
-                    // Monthly Burn = Salary - Remaining Monthly Balance
-                    monthlyBurn = monthlyIncome - latestRemainingBalance;
+                    monthlyBurn = Math.max(totalBudgets, 0);
                 }
 
-                // Fallbacks (mantém para robustez, mas não depende de currentWeekData)
-                if (monthlyBurn === 0) {
-                    monthlyBurn = 1;
+                if (monthlyBurn === 0 && currentFinancialWeekSpent > 0) {
+                    monthlyBurn = currentFinancialWeekSpent * 4;
                 }
-                if (totalBudgets === 0) {
-                    totalBudgets = 1;
+                if (totalBudgets === 0 && currentFinancialWeekSpent > 0) {
+                    totalBudgets = currentFinancialWeekSpent * 4;
                 }
 
-                const netMonthlyFlow = monthlyIncome - totalBudgets;
+                const netMonthlyFlow = latestRemainingBalance;
 
                 let resultString = '';
                 let detailsString = '';
@@ -201,7 +447,7 @@
                 let daysRunwayStr = '';
 
                 // Define burnToUse at a higher scope so it can be passed to state safely
-                const burnToUse = monthlyBurn > 0 ? monthlyBurn : 1;
+                const burnToUse = monthlyBurn > 0 ? monthlyBurn : (totalBudgets > 0 ? totalBudgets : 1);
 
                 if (globalNetWorth <= 0) {
                     resultString = '0 Months';
@@ -246,31 +492,15 @@
                     }
                 }
 
-                // --- Optimistic Calculation (Financial Momentum) ---
-                let optResultString = '';
-                let optDetailsString = '';
-                let optIsSafe = false;
+                let optResultString = `${netMonthlyFlow > 0 ? '+' : netMonthlyFlow < 0 ? '-' : ''}${formatCurrency(Math.abs(netMonthlyFlow))}/mo`;
+                let optDetailsString = netMonthlyFlow > 0
+                    ? 'Positive monthly momentum'
+                    : netMonthlyFlow < 0
+                        ? 'Negative monthly momentum'
+                        : 'No monthly momentum';
+                let optIsSafe = netMonthlyFlow >= 0;
 
-                if (netMonthlyFlow > 0) {
-                    optResultString = '∞ Safe';
-                    optDetailsString = '';
-                    optIsSafe = true;
-                } else if (netMonthlyFlow === 0) {
-                    optResultString = 'Stagnant';
-                    optDetailsString = `0 growth expected`;
-                    optIsSafe = true;
-                } else {
-                    const monthlyBurnNet = Math.abs(netMonthlyFlow);
-                    const optMonthsLeft = globalNetWorth / monthlyBurnNet;
-                    if (optMonthsLeft >= 12) {
-                        const years = (optMonthsLeft / 12).toFixed(1);
-                        optResultString = `${years} Years`;
-                    } else {
-                        optResultString = `${optMonthsLeft.toFixed(1)} Months`;
-                    }
-                    optDetailsString = `Burning ${formatCurrency(monthlyBurnNet)}/mo`;
-                    optIsSafe = optMonthsLeft >= 3;
-                }
+                if (isCancelled) return;
 
                 setRealisticRunway({
                     value: resultString,
@@ -287,14 +517,15 @@
                     loading: false,
                     details: optDetailsString,
                     wealth: globalNetWorth,
-                    netMonthlyFlow,
-                    daysRunway: '',
+                    netMonthlyFlow, // Pass flow straight to state to render dynamic projections
+                    daysRunway: '', // Usually not helpful for optimistic view
                     isSafe: optIsSafe,
                     raw: { monthlyIncome, monthlyBurn: burnToUse, totalBudgets, netMonthlyFlow }
                 });
 
             } catch (err) {
                 console.error("Runway calc failed", err);
+                if (isCancelled) return;
                 setRealisticRunway({ value: 'Error', loading: false, details: 'Check connection', isSafe: false });
                 setOptimisticRunway({ value: 'Error', loading: false, details: 'Check connection', isSafe: false });
             }
@@ -304,10 +535,13 @@
             calculateRunway();
         } else {
             setRealisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
-            setOptimisticRunway({ value: '∞ Safe', loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true });
+            setOptimisticRunway({ value: `${formatCurrency(0)}/mo`, loading: false, details: 'No data yet. Start tracking!', wealth: 0, isSafe: true, netMonthlyFlow: 0, raw: {} });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [weeks, categories]);
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [weeks, totalSavings, isAppLoading, currentFinancialWeekSpent]);
 
     // Format relative time (e.g. "Today", "Yesterday", "Oct 12")
     const formatExpenseDate = (dateString) => {
@@ -322,27 +556,8 @@
     }
 
 
-    // --- Month selector UI ---
-    // Mostra apenas meses disponíveis
-
-    // --- JSX Render ---
-    // (continuação do componente Dashboard)
     return (
         <div className="dashboard-container">
-            {/* Month Selector */}
-            <div className="dashboard-month-selector" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', margin: '16px 0 0 0', gap: 8 }}>
-                <label htmlFor="month-select" style={{ fontWeight: 500, marginRight: 8 }}>Month:</label>
-                <select
-                    id="month-select"
-                    value={selectedMonth}
-                    onChange={e => setSelectedMonth(e.target.value)}
-                    style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #D1D5DB', fontSize: '1rem', background: '#fff', color: '#111827' }}
-                >
-                    {availableMonths.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                </select>
-            </div>
             <header className="dashboard-header">
                 <div className="dashboard-header-bg" style={{ backgroundImage: `url(${user?.avatar || '/no-avatar.jpg'})` }}></div>
                 <div className="dashboard-header-overlay"></div>
@@ -366,18 +581,25 @@
 
             {/* 1. HERO CARDS: RUNWAY & MOMENTUM */}
             <section className="hero-section">
-                <div className={`hero-card ${optimisticRunway.isSafe ? 'optimistic-glow' : 'warning-glow'}`}>
+                <div className={`hero-card financial-momentum-card ${optimisticRunway.isSafe ? 'optimistic-glow' : 'warning-glow'}`}>
                     <div className="hero-label-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', position: 'relative', width: '100%', justifyContent: 'center' }}>
                         <span className="hero-label" style={{ margin: 0 }}>Financial Momentum</span>
                         <button
+                            type="button"
                             className="info-icon-btn"
-                            onClick={() => setShowRunwayInfo('optimistic')}
+                            onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setShowRunwayInfo('optimistic');
+                                setShowRunwayMath(false);
+                            }}
                             title="How is this calculated?"
+                            aria-label="Open Financial Momentum explanation"
                         >
                             ?
                         </button>
 
-                        {optimisticRunway.value === '∞ Safe' && optimisticRunway.netMonthlyFlow > 0 && (
+                        {optimisticRunway.netMonthlyFlow > 0 && (
                             <button
                                 type="button"
                                 className={`projection-action-btn ${isEditingProjection ? 'saving' : ''}`}
@@ -408,7 +630,7 @@
                         {optimisticRunway.loading ? <span className="skeleton-text"></span> : optimisticRunway.value}
                     </div>
                     <div className="hero-subtext" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        {optimisticRunway.value === '∞ Safe' && optimisticRunway.netMonthlyFlow > 0 ? (
+                        {optimisticRunway.netMonthlyFlow > 0 ? (
                             <>
                                 <span style={{ fontSize: '0.95rem', color: '#4B5563' }}>
                                     Wealth growing by <strong style={{ color: '#059669' }}>{formatCurrency(optimisticRunway.netMonthlyFlow)}</strong>/mo
@@ -466,6 +688,21 @@
                 </div>
             </section>
 
+            <div className="dashboard-month-selector">
+                <label htmlFor="dashboard-month" className="month-select-label">Dashboard month</label>
+                <select
+                    id="dashboard-month"
+                    className="month-select"
+                    value={selectedMonth}
+                    onChange={(event) => setSelectedMonth(event.target.value)}
+                    disabled={monthOptions.length === 0}
+                >
+                    {monthOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                </select>
+            </div>
+
             {/* 2. QUICK GLANCES */}
             <section className="quick-glance-section">
                 <div className="glance-card">
@@ -509,6 +746,28 @@
                         </div>
                     </div>
                 </div>
+
+                {overBudgetCategories.length > 0 && (
+                    <div className="glass-card dashboard-over-budget-card">
+                        <div className="dashboard-over-budget-header">
+                            <h3>Categories Over Limit</h3>
+                            <span className="dashboard-over-budget-total">{formatCurrency(totalOverBudgetAmount)}</span>
+                        </div>
+                        <div className="dashboard-over-budget-list">
+                            {overBudgetCategories.map(category => (
+                                <div key={`dashboard-over-budget-${category.name}`} className="dashboard-over-budget-item">
+                                    <div>
+                                        <div className="dashboard-over-budget-name">{category.name}</div>
+                                        <div className="dashboard-over-budget-meta">
+                                            Planned {formatCurrency(category.monthlyBudget)} • Spent {formatCurrency(category.spent)}
+                                        </div>
+                                    </div>
+                                    <div className="dashboard-over-budget-amount">+ {formatCurrency(category.exceededAmount)}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </section>
 
             <section className="charts-and-lists">
@@ -543,30 +802,28 @@
                 {/* 5. DONUT CHART */}
                 <div className="glass-card chart-card">
                     <h3>Where it goes</h3>
-                    <div style={{ width: '100%', minWidth: 1, height: 200, minHeight: 1, position: 'relative', overflow: 'hidden' }}>
-                        {chartsReady && donutData.length > 0 ? (
-                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={donutData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={55}
-                                        outerRadius={75}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {donutData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                        formatter={(value) => formatCurrency(value)}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
+                    <div ref={chartContainerRef} className="chart-container-shell">
+                        {chartsReady && donutData.length > 0 && chartBounds.width > 0 && chartBounds.height > 0 ? (
+                            <PieChart width={chartBounds.width} height={chartBounds.height}>
+                                <Pie
+                                    data={donutData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={55}
+                                    outerRadius={75}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {donutData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    formatter={(value) => formatCurrency(value)}
+                                />
+                            </PieChart>
                         ) : (
                             <div className="empty-state" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No expenses this month</div>
                         )}
@@ -621,9 +878,17 @@
                             <div className="hero-label-wrapper-apocalipse">
                                 <span className="hero-label-apocalipse">Strict Runway Survival</span>
                                 <button
+                                    type="button"
                                     className="info-icon-btn-apocalipse"
-                                    onClick={() => { setShowWorstCase(false); setShowRunwayInfo('strict'); }}
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        setShowWorstCase(false);
+                                        setShowRunwayInfo('strict');
+                                        setShowRunwayMath(false);
+                                    }}
                                     title="How is this calculated?"
+                                    aria-label="Open Strict Runway explanation"
                                 >
                                     ?
                                 </button>
@@ -668,7 +933,7 @@
             )}
 
             {/* 6. EXPLAINER MODAL */}
-            {showRunwayInfo && (
+            {showRunwayInfo && createPortal((
                 <div className="modal-overlay info-modal-overlay" onClick={() => { setShowRunwayInfo(false); setShowRunwayMath(false); }}>
                     <div className="modal-content info-modal" onClick={e => e.stopPropagation()}>
                         <button className="modal-close" onClick={() => { setShowRunwayInfo(false); setShowRunwayMath(false); }}>×</button>
@@ -736,26 +1001,26 @@
                                 <div className="info-content">
                                     {!showRunwayMath ? (
                                         <>
-                                            <p>The <strong>Financial Momentum</strong> card gives you an optimistic view of the future by assuming you keep your current job.</p>
+                                            <p>The <strong>Financial Momentum</strong> card shows the monthly balance generated by your latest manual plan.</p>
 
                                             <div className="info-step">
-                                                <h3>1. Wealth Growing</h3>
-                                                <p>We subtract your <strong>Total Budget Allocation</strong> (including savings and spending categories) from your <strong>Monthly Salary</strong>. This gives your Remaining Monthly Balance! If the result is positive, congratulations! Your wealth is growing every month.</p>
+                                                <h3>1. Base Month</h3>
+                                                <p>We read your most recent month with <strong>source: manual</strong>. Propagated months are ignored so the card reflects the month you actually planned.</p>
                                             </div>
 
                                             <div className="info-step">
-                                                <h3>2. Infinite Runway & Projections</h3>
-                                                <p>If your wealth is growing, you technically have an <strong>∞ Safe</strong> runway! We calculate exactly how much money you will have accumulated at the end of a given period.</p>
+                                                <h3>2. Net Monthly Flow</h3>
+                                                <p>We subtract your <strong>Total Budget</strong> from your <strong>Monthly Salary</strong>. Weekly categories are converted to their monthly equivalent before the total is calculated.</p>
                                             </div>
 
                                             <div className="info-step">
-                                                <h3>3. Custom Contracts</h3>
-                                                <p>If you have a fixed-term contract, simply click the edit pencil icon (✎) on the card to change the standard 12-month projection into your exact remaining contract length.</p>
+                                                <h3>3. Reading the Result</h3>
+                                                <p>If the result is positive, the card shows how much you are adding per month. If it is negative, the card shows your monthly deficit. The amount is always displayed as <strong>AED/month</strong>.</p>
                                             </div>
 
                                             <div className="info-step">
-                                                <h3>4. Deficit Mode</h3>
-                                                <p>If you are spending more than you earn, we tell you how many months until your deficit drains your entire Net Worth.</p>
+                                                <h3>4. Projection Block</h3>
+                                                <p>The projection underneath uses that same monthly flow together with your current net worth, so positive flow grows the projection and negative flow reduces it.</p>
                                             </div>
                                         </>
                                     ) : (
@@ -782,12 +1047,12 @@
                                                 </div>
                                             ) : (
                                                 <div>
-                                                    <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Deficit Runway</h3>
+                                                    <h3 style={{ fontSize: '0.9rem', color: '#4B5563', marginBottom: '8px' }}>Deficit Projection</h3>
                                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', fontSize: '0.9rem', fontFamily: 'monospace' }}>
                                                         <span>Net Worth:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(optimisticRunway.wealth || 0)}</span>
-                                                        <span>÷ Shortfall:</span> <span style={{ textAlign: 'right' }}>{formatCurrency(Math.abs(optimisticRunway.raw?.netMonthlyFlow || 0))}</span>
+                                                        <span>+ (Net Flow × Months):</span> <span style={{ textAlign: 'right' }}>{formatCurrency((optimisticRunway.raw?.netMonthlyFlow || 0) * (Number(projectionMonths) || 1))}</span>
                                                         <div style={{ gridColumn: '1 / -1', height: '1px', background: '#D1D5DB', margin: '4px 0' }}></div>
-                                                        <strong>= Runway:</strong> <strong style={{ textAlign: 'right' }}>{optimisticRunway.value}</strong>
+                                                        <strong>= Future Wealth:</strong> <strong style={{ textAlign: 'right' }}>{formatCurrency((optimisticRunway.wealth || 0) + ((optimisticRunway.raw?.netMonthlyFlow || 0) * (Number(projectionMonths) || 1)))}</strong>
                                                     </div>
                                                 </div>
                                             )}
@@ -807,7 +1072,7 @@
 
                     </div>
                 </div>
-            )}
+            ), document.body)}
 
             {/* 7. AVATAR ZOOM MODAL */}
             {showAvatarZoom && (
@@ -826,4 +1091,6 @@
 
         </div>
     );
+};
+
 export default Dashboard;

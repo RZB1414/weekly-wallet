@@ -3,7 +3,7 @@ import '../styles/MonthlyPlanning.css';
 import { api } from '../lib/api';
 import { getFinancialInfo, ensureRefundsCategory, filterExpensesByCategory, calculateCategoryNet, normalizeRefundExpense } from '../lib/utils';
 
-const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPlanSave }) => {
+const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPlanSave, planningVersion = 0 }) => {
     // View State: 'LIST' | 'DETAIL'
     const [view, setView] = useState('LIST');
     const [isEditing, setIsEditing] = useState(false);
@@ -35,12 +35,14 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    const isManualPlan = (plan = {}) => plan.source === 'manual';
+
     useEffect(() => {
         if (isOpen) {
             setView('LIST'); // Always start with list
             loadAvailablePlans();
         }
-    }, [isOpen]);
+    }, [isOpen, planningVersion]);
 
     // Load detailed data when switching to DETAIL view
     useEffect(() => {
@@ -75,7 +77,17 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         setIsLoading(true);
         try {
             const data = await api.getMonthlyPlannings();
-            setAvailablePlans(data.plans || []);
+            const sortedPlans = [...(data.plans || [])].sort((leftPlan, rightPlan) => {
+                if (leftPlan.year !== rightPlan.year) {
+                    return rightPlan.year - leftPlan.year;
+                }
+
+                return rightPlan.month - leftPlan.month;
+            });
+
+            const detailedPlans = await api.getMonthlyPlanningDetails(sortedPlans);
+
+            setAvailablePlans(detailedPlans.filter(({ data: planData }) => isManualPlan(planData)).map(({ data: _planData, ...planRef }) => planRef));
         } catch (error) {
             console.error("Failed to load plans list", error);
         } finally {
@@ -97,32 +109,70 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         budget: cat.budget || 0
     }));
 
+    const sortExpensesByDate = (expenses = []) => {
+        return [...expenses].sort((leftExpense, rightExpense) => {
+            const leftDate = new Date(leftExpense.date).getTime();
+            const rightDate = new Date(rightExpense.date).getTime();
+
+            if (leftDate !== rightDate) {
+                return rightDate - leftDate;
+            }
+
+            return String(rightExpense.id || '').localeCompare(String(leftExpense.id || ''));
+        });
+    };
+
+    const normalizePlanningCategories = (planningCategories = []) => {
+        const loadedCategories = (planningCategories || []).map(cat => {
+            if (typeof cat === 'string') {
+                return { id: Date.now() + Math.random(), name: cat, budget: 0, type: 'credit', frequency: 'monthly' };
+            }
+
+            let frequency = cat.frequency || 'monthly';
+            let budget = cat.budget || 0;
+            if ((cat.name.toLowerCase() === 'coffee' || cat.name.toLowerCase() === 'café') && frequency !== 'weekly') {
+                frequency = 'weekly';
+                budget = budget / 4;
+            }
+
+            return { ...cat, type: cat.type || 'credit', frequency, budget };
+        });
+
+        return ensureRefundsCategory(loadedCategories).map(cat => ({
+            ...cat,
+            id: cat.id || crypto.randomUUID(),
+            frequency: cat.frequency || 'monthly',
+            type: cat.type || 'credit',
+            budget: cat.budget || 0
+        }));
+    };
+
+    const getClosestPreviousPlan = async (year, month) => {
+        const plansData = availablePlans.length > 0 ? { plans: availablePlans } : await api.getMonthlyPlannings();
+        const previousPlan = (plansData.plans || [])
+            .filter(plan => (plan.year < year) || (plan.year === year && plan.month < month))
+            .sort((leftPlan, rightPlan) => {
+                if (leftPlan.year !== rightPlan.year) {
+                    return rightPlan.year - leftPlan.year;
+                }
+
+                return rightPlan.month - leftPlan.month;
+            })[0];
+
+        if (!previousPlan) return null;
+
+        return api.getMonthlyPlanning(previousPlan.year, previousPlan.month);
+    };
+
     const loadData = async () => {
         setIsLoading(true);
         try {
             const data = await api.getMonthlyPlanning(selectedYear, selectedMonth);
+            const sourceData = (data.categories || []).length > 0
+                ? data
+                : (await getClosestPreviousPlan(selectedYear, selectedMonth)) || data;
 
-            // Migrate legacy categories (strings) to objects if needed
-            const loadedCategories = (data.categories || []).map(cat => {
-                if (typeof cat === 'string') {
-                    return { id: Date.now() + Math.random(), name: cat, budget: 0, type: 'credit', frequency: 'monthly' };
-                }
-                let frequency = cat.frequency || 'monthly';
-                let budget = cat.budget || 0;
-                if ((cat.name.toLowerCase() === 'coffee' || cat.name.toLowerCase() === 'café') && frequency !== 'weekly') {
-                    frequency = 'weekly';
-                    budget = budget / 4;
-                }
-                return { ...cat, type: cat.type || 'credit', frequency, budget }; // Ensure type/frequency exists
-            });
-
-            const normalizedCategories = ensureRefundsCategory(loadedCategories).map(cat => ({
-                ...cat,
-                id: cat.id || crypto.randomUUID(),
-                frequency: cat.frequency || 'monthly',
-                type: cat.type || 'credit',
-                budget: cat.budget || 0
-            }));
+            const normalizedCategories = normalizePlanningCategories(sourceData.categories || []);
 
             setCategories(normalizedCategories.length > 0 ? normalizedCategories : defaultCategories());
             setSalary(data.salary || 0);
@@ -137,13 +187,38 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         }
     };
 
-    const handleCreateNew = () => {
-        const now = new Date();
-        setSelectedYear(now.getFullYear());
-        setSelectedMonth(now.getMonth() + 1);
+    const handleCreateNew = async () => {
+        const latestPlan = [...availablePlans].sort((leftPlan, rightPlan) => {
+            if (leftPlan.year !== rightPlan.year) {
+                return rightPlan.year - leftPlan.year;
+            }
+
+            return rightPlan.month - leftPlan.month;
+        })[0];
+
+        const baseDate = latestPlan
+            ? new Date(latestPlan.year, latestPlan.month - 1, 1)
+            : new Date();
+
+        const nextDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1);
+        const nextYear = nextDate.getFullYear();
+        const nextMonth = nextDate.getMonth() + 1;
+
+        setSelectedYear(nextYear);
+        setSelectedMonth(nextMonth);
         setIsEditing(true);
         setView('DETAIL');
-        setCategories(defaultCategories());
+
+        try {
+            const previousPlan = await getClosestPreviousPlan(nextYear, nextMonth);
+            const inheritedCategories = normalizePlanningCategories(previousPlan?.categories || []);
+
+            setCategories(inheritedCategories.length > 0 ? inheritedCategories : defaultCategories());
+        } catch (error) {
+            console.error('Failed to inherit categories for new monthly planning', error);
+            setCategories(defaultCategories());
+        }
+
         setSalary(0);
         setSalaryInput('');
     };
@@ -164,40 +239,10 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             // Salva o mês atual normalmente
             await api.saveMonthlyPlanning(selectedYear, selectedMonth, {
                 categories: categories,
-                salary: finalSalary
+                salary: finalSalary,
+                source: 'manual'
             });
             setSalary(finalSalary);
-
-            // Propaga categorias para os próximos 12 meses se não existirem
-            const propagateMonths = 12;
-            for (let i = 1; i <= propagateMonths; i++) {
-                const nextDate = new Date(selectedYear, selectedMonth - 1 + i, 1);
-                const nextYear = nextDate.getFullYear();
-                const nextMonth = nextDate.getMonth() + 1;
-                try {
-                    const nextPlan = await api.getMonthlyPlanning(nextYear, nextMonth);
-                    let nextCategories = Array.isArray(nextPlan.categories) ? [...nextPlan.categories] : [];
-                    let changed = false;
-                    categories.forEach(cat => {
-                        if (!nextCategories.some(c => c.name === cat.name)) {
-                            nextCategories.push({ ...cat, id: cat.id || Date.now() + Math.random() });
-                            changed = true;
-                        }
-                    });
-                    if (changed) {
-                        await api.saveMonthlyPlanning(nextYear, nextMonth, {
-                            categories: nextCategories,
-                            salary: nextPlan.salary || 0
-                        });
-                    }
-                } catch (e) {
-                    // Se não existe plano, cria novo com as categorias atuais
-                    await api.saveMonthlyPlanning(nextYear, nextMonth, {
-                        categories: categories.map(cat => ({ ...cat, id: cat.id || Date.now() + Math.random() })),
-                        salary: 0
-                    });
-                }
-            }
 
             if (onPlanSave) {
                 onPlanSave(selectedYear, selectedMonth, categories, finalSalary);
@@ -336,16 +381,6 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
         return total + relevantActuals;
     }, [categories, monthlyExpenses]);
 
-    // Remaining Balance Logic:
-    // Salary - Sum of all categories' budgets (credits + spends)
-    const remainingAmount = useMemo(() => {
-        const totalBudgets = categories.reduce((sum, cat) => {
-            const monthlyEquivalent = cat.frequency === 'weekly' ? (cat.budget || 0) * 4 : (cat.budget || 0);
-            return sum + monthlyEquivalent;
-        }, 0);
-        return salary - totalBudgets;
-    }, [salary, categories]);
-
     const getMonthName = (m) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
     // Category Summary Logic
@@ -357,9 +392,34 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
             monthlyBudget,
             spent,
             remaining: monthlyBudget - spent,
-            expenses: filterExpensesByCategory(monthlyExpenses, cat.name)
+            expenses: sortExpensesByDate(filterExpensesByCategory(monthlyExpenses, cat.name))
         };
     });
+
+    const overBudgetCategories = useMemo(() => {
+        return categorySummaries
+            .filter(category => category.remaining < 0)
+            .map(category => ({
+                ...category,
+                exceededAmount: Math.abs(category.remaining)
+            }))
+            .sort((leftCategory, rightCategory) => rightCategory.exceededAmount - leftCategory.exceededAmount);
+    }, [categorySummaries]);
+
+    // Remaining Balance Logic:
+    // Salary - planned budgets - actual overages above each category limit
+    const remainingAmount = useMemo(() => {
+        const totalBudgets = categories.reduce((sum, cat) => {
+            const monthlyEquivalent = cat.frequency === 'weekly' ? (cat.budget || 0) * 4 : (cat.budget || 0);
+            return sum + monthlyEquivalent;
+        }, 0);
+
+        const totalExceededAmount = overBudgetCategories.reduce((sum, category) => {
+            return sum + category.exceededAmount;
+        }, 0);
+
+        return salary - totalBudgets - totalExceededAmount;
+    }, [salary, categories, overBudgetCategories]);
 
     if (!isOpen) return null;
 
@@ -375,7 +435,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                         </div>
                         <div className="modal-content">
                             <button className="create-new-btn" onClick={handleCreateNew}>
-                                + Create New Monthly Plan
+                                + Create Next Monthly Plan
                             </button>
 
                             {isLoading ? (

@@ -324,3 +324,48 @@
         display: none;
     }
 }
+
+@media (min-width: 1280px) {
+    .history-view-container {
+        padding-bottom: 160px;
+    }
+
+    .history-header-content {
+        max-width: 1380px;
+        margin: 0 auto;
+    }
+
+    .history-header-top {
+        padding: 2rem 2.25rem;
+    }
+
+    .history-filters {
+        padding: 18px 36px 24px;
+        justify-content: flex-start;
+    }
+
+    .history-filters .glass-select {
+        max-width: 240px;
+        flex: 0 0 240px;
+    }
+
+    .quick-actions-footer {
+        width: min(980px, calc(100% - 56px));
+        bottom: 28px;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .quick-action-btn {
+        padding: 14px 16px;
+        font-size: 0.98rem;
+        border-radius: 22px;
+    }
+
+    .add-expense-fab-global {
+        width: 68px;
+        height: 68px;
+        right: 32px;
+        bottom: 132px;
+    }
+}

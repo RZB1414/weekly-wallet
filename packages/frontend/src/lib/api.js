@@ -1,4 +1,37 @@
 const API_URL = import.meta.env.VITE_API_URL || 'https://weekly-wallet-backend.renanbuiatti14.workers.dev/api';
+const MONTHLY_PLANNING_CONCURRENCY = 4;
+const monthlyPlanningCache = new Map();
+const monthlyPlanningInFlight = new Map();
+let monthlyPlanningsListCache = null;
+let monthlyPlanningsListInFlight = null;
+
+function getMonthlyPlanningKey(year, month) {
+    return `${year}-${month}`;
+}
+
+function cloneData(data) {
+    if (typeof structuredClone === 'function') {
+        return structuredClone(data);
+    }
+
+    return JSON.parse(JSON.stringify(data));
+}
+
+async function mapWithConcurrency(items, worker, concurrency = MONTHLY_PLANNING_CONCURRENCY) {
+    const results = new Array(items.length);
+    let currentIndex = 0;
+
+    const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+        while (currentIndex < items.length) {
+            const nextIndex = currentIndex;
+            currentIndex += 1;
+            results[nextIndex] = await worker(items[nextIndex], nextIndex);
+        }
+    });
+
+    await Promise.all(runners);
+    return results;
+}
 
 // ──────────────────────────────────────────────
 // Token helper
@@ -159,6 +192,17 @@ export const api = {
     },
 
     getMonthlyPlanning: async (year, month) => {
+        const cacheKey = getMonthlyPlanningKey(year, month);
+
+        if (monthlyPlanningCache.has(cacheKey)) {
+            return cloneData(monthlyPlanningCache.get(cacheKey));
+        }
+
+        if (monthlyPlanningInFlight.has(cacheKey)) {
+            return cloneData(await monthlyPlanningInFlight.get(cacheKey));
+        }
+
+        const requestPromise = (async () => {
         try {
             const res = await fetch(`${API_URL}/monthly-planning/${year}/${month}`, {
                 headers: getAuthHeaders(),
@@ -171,11 +215,19 @@ export const api = {
                 return { categories: [], expenses: [], salary: 0 };
             }
             if (!res.ok) throw new Error('Failed to fetch monthly planning');
-            return await res.json();
+            const data = await res.json();
+            monthlyPlanningCache.set(cacheKey, data);
+            return data;
         } catch (e) {
             console.error(e);
             return { categories: [], expenses: [], salary: 0 };
+        } finally {
+            monthlyPlanningInFlight.delete(cacheKey);
         }
+        })();
+
+        monthlyPlanningInFlight.set(cacheKey, requestPromise);
+        return cloneData(await requestPromise);
     },
 
     saveMonthlyPlanning: async (year, month, data) => {
@@ -186,12 +238,25 @@ export const api = {
                 body: JSON.stringify(data),
                 mode: 'cors'
             });
+            monthlyPlanningCache.delete(getMonthlyPlanningKey(year, month));
+            monthlyPlanningInFlight.delete(getMonthlyPlanningKey(year, month));
+            monthlyPlanningsListCache = null;
+            monthlyPlanningsListInFlight = null;
         } catch (e) {
             console.error('Failed to save monthly planning', e);
         }
     },
 
     getMonthlyPlannings: async () => {
+        if (monthlyPlanningsListCache) {
+            return cloneData(monthlyPlanningsListCache);
+        }
+
+        if (monthlyPlanningsListInFlight) {
+            return cloneData(await monthlyPlanningsListInFlight);
+        }
+
+        const requestPromise = (async () => {
         try {
             const res = await fetch(`${API_URL}/monthly-plannings`, {
                 headers: getAuthHeaders(),
@@ -204,10 +269,27 @@ export const api = {
                 return { plans: [] };
             }
             if (!res.ok) throw new Error('Failed to fetch monthly plannings list');
-            return await res.json();
+            const data = await res.json();
+            monthlyPlanningsListCache = data;
+            return data;
         } catch (e) {
             console.error(e);
             return { plans: [] };
+        } finally {
+            monthlyPlanningsListInFlight = null;
         }
+        })();
+
+        monthlyPlanningsListInFlight = requestPromise;
+        return cloneData(await requestPromise);
+    },
+
+    getMonthlyPlanningDetails: async (plans = [], concurrency = MONTHLY_PLANNING_CONCURRENCY) => {
+        if (!Array.isArray(plans) || plans.length === 0) return [];
+
+        return mapWithConcurrency(plans, async (plan) => ({
+            ...plan,
+            data: await api.getMonthlyPlanning(plan.year, plan.month)
+        }), concurrency);
     }
 };
