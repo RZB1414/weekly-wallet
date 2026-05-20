@@ -3,6 +3,11 @@ import '../styles/MonthlyPlanning.css';
 import { api } from '../lib/api';
 import { getFinancialInfo, ensureRefundsCategory, filterExpensesByCategory, calculateCategoryNet, normalizeRefundExpense } from '../lib/utils';
 
+const CATEGORY_TYPE_LABELS = {
+    credit: 'Flexible Spending Budget',
+    spend: 'Spend'
+};
+
 const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPlanSave, planningVersion = 0 }) => {
     // View State: 'LIST' | 'DETAIL'
     const [view, setView] = useState('LIST');
@@ -23,7 +28,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
     // UI State
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryBudget, setNewCategoryBudget] = useState('');
-    const [newCategoryType, setNewCategoryType] = useState('credit'); // 'credit' (standard) | 'spend' (deducts budget)
+    const [newCategoryType, setNewCategoryType] = useState('credit'); // 'credit' is a flexible spending budget; 'spend' is committed spend.
     const [newCategoryFrequency, setNewCategoryFrequency] = useState('monthly'); // 'monthly' | 'weekly'
     const [expandedCategoryId, setExpandedCategoryId] = useState(null);
     const [editingCategoryId, setEditingCategoryId] = useState(null);
@@ -532,7 +537,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                                             className={`type-btn ${editCategoryType === 'credit' ? 'active credit' : ''}`}
                                                             onClick={() => setEditCategoryType('credit')}
                                                         >
-                                                            Credit
+                                                            {CATEGORY_TYPE_LABELS.credit}
                                                         </button>
                                                         <button
                                                             className={`type-btn ${editCategoryType === 'spend' ? 'active expense' : ''}`}
@@ -596,7 +601,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                                         <span>
                                                             {cat.name}
                                                             <small style={{ fontWeight: 'normal', opacity: 0.7, fontSize: '0.7em', marginLeft: '5px' }}>
-                                                                ({cat.type === 'spend' ? 'Spend' : 'Credit'} • {cat.frequency === 'weekly' ? 'Weekly' : 'Monthly'})
+                                                                ({CATEGORY_TYPE_LABELS[cat.type] || CATEGORY_TYPE_LABELS.credit} • {cat.frequency === 'weekly' ? 'Weekly' : 'Monthly'})
                                                             </small>
                                                         </span>
                                                         <span>AED {(cat.monthlyBudget || 0).toFixed(2)}</span>
@@ -669,7 +674,7 @@ const MonthlyPlanningModal = ({ isOpen, onClose, weeks = [], onUpdateWeeks, onPl
                                             className={`type-btn ${newCategoryType === 'credit' ? 'active credit' : ''}`}
                                             onClick={() => setNewCategoryType('credit')}
                                         >
-                                            Credit
+                                            {CATEGORY_TYPE_LABELS.credit}
                                         </button>
                                         <button
                                             className={`type-btn ${newCategoryType === 'spend' ? 'active expense' : ''}`}

@@ -119,13 +119,13 @@ const UserGuide = ({ isOpen, onClose }) => {
                         <ol className="guide-steps">
                             <li>Enter your <strong>monthly salary</strong></li>
                             <li>Add <strong>categories</strong> with name, type, and budget</li>
-                            <li>Choose type: <span className="guide-badge-green">Credit</span> or <span className="guide-badge-red">Spend</span></li>
+                            <li>Choose type: <span className="guide-badge-green">Flexible Spending Budget</span> or <span className="guide-badge-red">Spend</span></li>
                             <li>Set <strong>frequency</strong>: weekly or monthly</li>
                             <li>Tap <strong>Save</strong></li>
                         </ol>
                         <div className="guide-tip">
                             <strong>💡 How Categories Work</strong>
-                            <p><strong><span className="guide-badge-green">Credit</span>:</strong> The amount is deducted from your <strong>Global Monthly Balance</strong> (used for planning), but it is <strong>NOT</strong> automatically recorded as an expense. It creates a "Credit Account" (like Market or Uber) for you to spend from throughout the month.</p>
+                            <p><strong><span className="guide-badge-green">Flexible Spending Budget</span>:</strong> The amount is reserved from your <strong>Global Monthly Balance</strong> for a category you will spend from throughout the month, but it is <strong>NOT</strong> automatically recorded as an expense.</p>
                             <p style={{ marginTop: '8px' }}><strong><span className="guide-badge-red">Spend</span>:</strong> The amount is immediately considered "spent" or "saved" (like a fixed bill, debt payment, or money put into Savings). It is deducted both from the Global Balance and instantly affects your actual cash flow.</p>
                         </div>
                     </section>

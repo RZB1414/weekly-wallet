@@ -233,9 +233,10 @@ const Dashboard = ({ weeks, categories, totalSavings, onNavigate, onAddExpense, 
         }, 0);
 
         const totalSpent = currentMonthWeeks.reduce((total, week) => {
-            return total + week.expenses
-                .filter(e => e.type !== 'credit')
-                .reduce((sum, e) => sum + Number(e.amount), 0);
+            return total + week.expenses.reduce((sum, expense) => {
+                const amount = Number(expense.amount) || 0;
+                return expense.type === 'credit' ? sum - amount : sum + amount;
+            }, 0);
         }, 0);
 
         return {
